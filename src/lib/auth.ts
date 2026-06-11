@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import type { UserRole } from '@/lib/roles';
 
@@ -9,8 +10,8 @@ export type SessionProfile = {
   kakaoNickname: string | null;
 };
 
-/** 로그인한 사용자의 프로필을 조회한다. 미로그인이면 null. */
-export async function getSessionProfile(): Promise<SessionProfile | null> {
+/** 로그인한 사용자의 프로필을 조회한다. 미로그인이면 null. 같은 서버 렌더 요청 안에서는 중복 조회를 줄인다. */
+export const getSessionProfile = cache(async (): Promise<SessionProfile | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,4 +43,4 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
     memberId: profile.member_id,
     kakaoNickname: profile.kakao_nickname,
   };
-}
+});
