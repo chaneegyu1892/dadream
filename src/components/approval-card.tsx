@@ -103,7 +103,7 @@ export function ApprovalCard({ profile, candidates, allUnlinked, cells }: Approv
                 <SelectValue placeholder="셀 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">셀 미지정</SelectItem>
+                <SelectItem value="none">무소속</SelectItem>
                 {cells.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}

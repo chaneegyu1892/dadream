@@ -84,7 +84,7 @@ export function MemberGrid({ members, cells }: MemberGridProps) {
               <div className="text-center">
                 <p className="font-medium leading-tight">{m.name}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {m.cellName ?? '셀 미지정'}
+                  {m.cellName ?? '무소속'}
                 </p>
               </div>
               {m.isOfficer && <Badge variant="secondary">임원</Badge>}

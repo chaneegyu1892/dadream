@@ -51,7 +51,7 @@ export function MemberForm({ cells }: MemberFormProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">셀 미지정</SelectItem>
+            <SelectItem value="none">무소속</SelectItem>
             {cells.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}

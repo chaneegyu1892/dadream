@@ -66,7 +66,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
         <div>
           <h1 className="text-2xl font-bold">{member.name}</h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{member.cells?.name ?? '셀 미지정'}</span>
+            <span>{member.cells?.name ?? '무소속'}</span>
             {member.duty && <span>· {member.duty}</span>}
             {member.is_officer && <Badge variant="secondary">임원</Badge>}
           </div>
