@@ -75,6 +75,7 @@ export function MemberGrid({ members, cells }: MemberGridProps) {
             <Link
               key={m.id}
               href={`/members/${m.id}`}
+              prefetch={false}
               className="flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors hover:bg-accent/50"
             >
               <Avatar className="size-16">
