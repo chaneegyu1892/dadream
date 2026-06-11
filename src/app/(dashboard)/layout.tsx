@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -14,17 +15,6 @@ export default async function DashboardLayout({
   if (!profile) redirect('/login');
   if (profile.approval !== 'approved') redirect('/pending');
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('notifications')
-    .select('id, type, title, body, link, read_at, created_at')
-    .eq('profile_id', profile.userId)
-    .order('created_at', { ascending: false })
-    .limit(15);
-
-  const notifications = (data ?? []) as NotificationRow[];
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
-
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       <Nav role={profile.role} />
@@ -32,22 +22,41 @@ export default async function DashboardLayout({
         <header className="flex items-center justify-between border-b px-4 py-2 md:justify-end md:px-8">
           <p className="font-bold md:hidden">다드림</p>
           <div className="flex items-center gap-1">
-            <NotificationBell
-              notifications={notifications.map((n) => ({
-                id: n.id,
-                title: n.title,
-                body: n.body,
-                link: n.link,
-                readAt: n.read_at,
-                createdAt: n.created_at,
-              }))}
-              unreadCount={unreadCount}
-            />
+            <Suspense fallback={<NotificationBell notifications={[]} unreadCount={0} />}>
+              <NotificationBellLoader profileId={profile.userId} />
+            </Suspense>
             <LogoutButton />
           </div>
         </header>
         <main className="flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-8">{children}</main>
       </div>
     </div>
+  );
+}
+
+async function NotificationBellLoader({ profileId }: { profileId: string }) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('notifications')
+    .select('id, type, title, body, link, read_at, created_at')
+    .eq('profile_id', profileId)
+    .order('created_at', { ascending: false })
+    .limit(15);
+
+  const notifications = (data ?? []) as NotificationRow[];
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  return (
+    <NotificationBell
+      notifications={notifications.map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        link: n.link,
+        readAt: n.read_at,
+        createdAt: n.created_at,
+      }))}
+      unreadCount={unreadCount}
+    />
   );
 }
