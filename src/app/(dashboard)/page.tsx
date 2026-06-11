@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { ROLE_LABELS } from '@/lib/roles';
 import { formatSlot, VISIT_STATUS_LABELS } from '@/lib/visits';
+import { sundayOf } from '@/lib/weeks';
 import { createClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,10 @@ export default async function HomePage() {
   const now = new Date();
   const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const [eventsRes, visitsRes] = await Promise.all([
+  const thisWeek = sundayOf(now);
+  const nextWeek = sundayOf(now, 1);
+
+  const [eventsRes, visitsRes, serviceRes] = await Promise.all([
     supabase
       .from('events')
       .select('id, title, starts_at, ends_at, location, description')
@@ -35,11 +39,29 @@ export default async function HomePage() {
       .in('status', ['requested', 'proposed', 'confirmed'])
       .order('created_at', { ascending: false })
       .limit(5),
+    supabase
+      .from('service_assignments')
+      .select('id, service_date, service_roles(name, sort_order), members(name)')
+      .in('service_date', [thisWeek, nextWeek]),
   ]);
 
   const events = (eventsRes.data ?? []) as EventRow[];
   const visits = (visitsRes.data ?? []) as unknown as VisitWithName[];
+  const services = (serviceRes.data ?? []) as unknown as {
+    id: string;
+    service_date: string;
+    service_roles: { name: string; sort_order: number } | null;
+    members: { name: string } | null;
+  }[];
   const isPastor = profile.role === 'pastor';
+
+  function serviceSummary(week: string): string {
+    const entries = services
+      .filter((s) => s.service_date === week && s.service_roles && s.members)
+      .sort((a, b) => (a.service_roles?.sort_order ?? 0) - (b.service_roles?.sort_order ?? 0));
+    if (entries.length === 0) return '미배정';
+    return entries.map((s) => `${s.service_roles?.name} ${s.members?.name}`).join(' · ');
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -58,6 +80,25 @@ export default async function HomePage() {
           <Link href="/members">명부 보기</Link>
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">예배위원</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex gap-3">
+            <span className="shrink-0 font-medium">이번 주</span>
+            <span className="text-muted-foreground">{serviceSummary(thisWeek)}</span>
+          </div>
+          <div className="flex gap-3">
+            <span className="shrink-0 font-medium">다음 주</span>
+            <span className="text-muted-foreground">{serviceSummary(nextWeek)}</span>
+          </div>
+          <Link href="/service" className="inline-block text-xs text-muted-foreground underline">
+            배정표 전체 보기
+          </Link>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -9,7 +9,8 @@ const NAV_ITEMS = [
   { href: '/', label: '홈', icon: '🏠' },
   { href: '/visits', label: '캘린더', icon: '📅' },
   { href: '/members', label: '명부', icon: '👥' },
-  { href: '/admin/approvals', label: '관리', icon: '⚙️', minRole: 'officer' as UserRole },
+  { href: '/service', label: '예배위원', icon: '🙏' },
+  { href: '/admin', label: '관리', icon: '⚙️', minRole: 'officer' as UserRole },
 ];
 
 export function Nav({ role }: { role: UserRole }) {
