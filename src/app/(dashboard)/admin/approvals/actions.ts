@@ -60,13 +60,16 @@ export async function approveProfile(input: ApproveInput): Promise<{ error?: str
     return { error: '승인 처리에 실패했어요. 이미 처리됐는지 확인해주세요.' };
   }
 
-  await supabase.rpc('push_notification', {
+  const { error: notifyError } = await supabase.rpc('push_notification', {
     target: parsed.data.profileId,
     n_type: 'approval',
     n_title: '가입이 승인되었어요',
     n_body: '다드림 대시보드에 오신 것을 환영해요!',
     n_link: '/',
   });
+  if (notifyError) {
+    console.error('[approveProfile] push_notification 실패:', notifyError.message);
+  }
 
   revalidatePath('/admin/approvals');
   return {};

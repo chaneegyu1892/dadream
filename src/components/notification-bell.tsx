@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { isSafeInternalLink } from '@/lib/links';
 import { cn } from '@/lib/utils';
 
 export interface NotificationItem {
@@ -78,7 +79,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
                   </p>
                 </div>
               );
-              return n.link ? (
+              return n.link && isSafeInternalLink(n.link) ? (
                 <Link key={n.id} href={n.link} onClick={() => setOpen(false)} className="block">
                   {content}
                 </Link>

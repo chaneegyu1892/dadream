@@ -5,9 +5,8 @@ import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { PHOTO_BUCKET } from '@/lib/photos';
+import { MAX_PHOTO_BYTES, photoExtensionFor } from '@/lib/photo-validation';
 import { createClient } from '@/lib/supabase/server';
-
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const memberSchema = z.object({
   name: z.string().trim().min(1, '이름을 입력해주세요.').max(30),
@@ -46,7 +45,10 @@ export async function createMember(formData: FormData): Promise<{ error?: string
     if (photo.size > MAX_PHOTO_BYTES) {
       return { error: '사진은 5MB 이하로 올려주세요.' };
     }
-    const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const ext = photoExtensionFor(photo.type);
+    if (!ext) {
+      return { error: 'JPG, PNG, WebP, GIF 이미지만 올릴 수 있어요.' };
+    }
     photoPath = `${crypto.randomUUID()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(PHOTO_BUCKET)
