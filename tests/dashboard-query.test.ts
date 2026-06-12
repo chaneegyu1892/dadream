@@ -44,12 +44,12 @@ describe('parseMemberSearchParams', () => {
 });
 
 describe('getCurrentMonthWindow', () => {
-  it('캘린더 초기 월 주변 일정만 가져오도록 전월 말~익월 초 범위를 만든다', () => {
+  it('캘린더 앞뒤 이동을 위해 현재 달 기준 앞뒤 1개월 범위를 만든다', () => {
     vi.setSystemTime(new Date('2026-06-15T12:00:00+09:00'));
 
     expect(getCurrentMonthWindow()).toEqual({
-      from: '2026-05-25T00:00:00.000+09:00',
-      to: '2026-07-05T23:59:59.999+09:00',
+      from: '2026-05-01T00:00:00.000+09:00',
+      to: '2026-07-31T23:59:59.999+09:00',
     });
   });
 });
