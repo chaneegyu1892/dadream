@@ -80,7 +80,7 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
               checked={item.done}
               disabled={isPending}
               onChange={(e) => run(() => toggleMeetingItem({ itemId: item.id, done: e.target.checked }))}
-              className="size-4 shrink-0"
+              className="size-5 shrink-0"
               aria-label={`${item.content} 완료 여부`}
             />
             <div className="min-w-0 flex-1">
@@ -95,9 +95,12 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
               </div>
             </div>
             <button
-              onClick={() => run(() => deleteMeetingItem({ itemId: item.id }))}
+              onClick={() => {
+                if (!window.confirm(`'${item.content}' 항목을 삭제할까요?`)) return;
+                run(() => deleteMeetingItem({ itemId: item.id }));
+              }}
               disabled={isPending}
-              className="shrink-0 text-sm text-muted-foreground hover:text-destructive"
+              className="-my-2 -mr-2 shrink-0 p-2 text-sm text-muted-foreground hover:text-destructive"
               aria-label={`${item.content} 삭제`}
             >
               ✕

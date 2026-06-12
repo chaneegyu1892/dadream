@@ -146,9 +146,12 @@ export function WeddingList({ weddings, members }: WeddingListProps) {
               <div className="flex shrink-0 items-center gap-2">
                 {w.weddingDate && <Badge>{dday(w.weddingDate)}</Badge>}
                 <button
-                  onClick={() => remove(w.id)}
+                  onClick={() => {
+                    if (!window.confirm(`${w.memberName} 님의 결혼 예정을 삭제할까요?`)) return;
+                    remove(w.id);
+                  }}
                   disabled={isPending}
-                  className="text-sm text-muted-foreground hover:text-destructive"
+                  className="-my-2 -mr-2 p-2 text-sm text-muted-foreground hover:text-destructive"
                   aria-label={`${w.memberName} 결혼 예정 삭제`}
                 >
                   ✕

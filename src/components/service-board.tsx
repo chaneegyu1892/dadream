@@ -83,9 +83,12 @@ export function ServiceBoard({
                       {a.memberName}
                       {canEdit && (
                         <button
-                          onClick={() => run(() => unassignService({ assignmentId: a.id }))}
+                          onClick={() => {
+                            if (!window.confirm(`${a.memberName} 님의 ${role.name} 배정을 해제할까요?`)) return;
+                            run(() => unassignService({ assignmentId: a.id }));
+                          }}
                           disabled={isPending}
-                          className="ml-0.5 text-muted-foreground hover:text-destructive"
+                          className="-my-2 -mr-1.5 ml-0.5 p-2 text-muted-foreground hover:text-destructive"
                           aria-label={`${a.memberName} 배정 해제`}
                         >
                           ✕
@@ -130,9 +133,12 @@ export function ServiceBoard({
                   <Badge key={r.id} variant="outline" className="gap-1">
                     {r.name}
                     <button
-                      onClick={() => run(() => removeServiceRole({ roleId: r.id }))}
+                      onClick={() => {
+                        if (!window.confirm(`'${r.name}' 직책을 삭제하면 모든 주차의 배정 기록도 함께 삭제돼요. 계속할까요?`)) return;
+                        run(() => removeServiceRole({ roleId: r.id }));
+                      }}
                       disabled={isPending}
-                      className="ml-0.5 text-muted-foreground hover:text-destructive"
+                      className="-my-2 -mr-1.5 ml-0.5 p-2 text-muted-foreground hover:text-destructive"
                       aria-label={`${r.name} 직책 삭제`}
                     >
                       ✕
