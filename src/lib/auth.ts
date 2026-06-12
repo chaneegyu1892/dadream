@@ -23,10 +23,16 @@ export const getSessionProfile = cache(async (): Promise<SessionProfile | null> 
     .from('profiles')
     .select('role, approval, member_id, kakao_nickname')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !profile) {
-    // 트리거가 프로필을 만들기 전이거나 조회 실패 — 승인 대기로 취급
+  if (error) {
+    // DB/네트워크 오류 — 권한을 추측하지 않고 미인증으로 처리한다
+    console.error('[getSessionProfile] 프로필 조회 오류:', error.message);
+    return null;
+  }
+
+  if (!profile) {
+    // 트리거가 프로필을 만들기 전 — 승인 대기로 취급
     return {
       userId: user.id,
       role: 'member',

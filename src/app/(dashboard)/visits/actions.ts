@@ -7,6 +7,7 @@ import { roleAtLeast } from '@/lib/roles';
 import { canTransition, formatSlot, slotToIso, type PreferredSlot, type VisitStatus } from '@/lib/visits';
 import { createClient } from '@/lib/supabase/server';
 import type { VisitRow } from '@/types/db';
+import type { TablesUpdate } from '@/types/supabase';
 
 const slotSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -135,7 +136,10 @@ export async function decideVisit(input: DecideVisitInput): Promise<{ error?: st
     return { error: '이미 처리된 신청이에요.' };
   }
 
-  const update: Record<string, unknown> = { status: nextStatus, updated_at: new Date().toISOString() };
+  const update: TablesUpdate<'visit_requests'> = {
+    status: nextStatus,
+    updated_at: new Date().toISOString(),
+  };
   let confirmedSlot: PreferredSlot | null = null;
 
   if (action === 'confirm') {
@@ -179,7 +183,7 @@ export async function decideVisit(input: DecideVisitInput): Promise<{ error?: st
       target: visit.requested_by,
       n_type: `visit_${action}`,
       n_title: titles[action],
-      n_body: reason || null,
+      n_body: reason || '',
       n_link: '/visits',
     });
     if (notifyError) {

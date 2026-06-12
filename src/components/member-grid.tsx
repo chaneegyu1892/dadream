@@ -68,30 +68,34 @@ export function MemberGrid({
     <div className="space-y-4">
       <form action="/members" className="space-y-2 rounded-xl border p-3">
         <input type="hidden" name="cell" value={selectedCell} />
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             name="q"
+            type="search"
+            enterKeyHint="search"
             defaultValue={query}
             placeholder="이름 검색"
-            className="flex-1"
+            className="sm:flex-1"
           />
-          <Select value={selectedCell} onValueChange={setSelectedCell}>
-            <SelectTrigger className="w-32 shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 셀</SelectItem>
-              <SelectItem value="unassigned">무소속</SelectItem>
-              {cells.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="submit" size="sm" className="h-9 shrink-0">
-            검색
-          </Button>
+          <div className="flex gap-2">
+            <Select value={selectedCell} onValueChange={setSelectedCell}>
+              <SelectTrigger className="flex-1 sm:w-32 sm:flex-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 셀</SelectItem>
+                <SelectItem value="unassigned">무소속</SelectItem>
+                {cells.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="submit" size="sm" className="h-9 shrink-0">
+              검색
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
           검색/셀 필터는 서버에서 바로 적용해서 필요한 인원 사진만 불러와요.
@@ -138,19 +142,27 @@ export function MemberGrid({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button asChild variant="outline" size="sm" aria-disabled={!hasPrevious}>
-            <Link href={hasPrevious ? pageHref(page - 1) : pageHref(page)}>
+          {hasPrevious ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={pageHref(page - 1)}>이전</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
               이전
-            </Link>
-          </Button>
+            </Button>
+          )}
           <span className="text-sm text-muted-foreground">
             {page} / {totalPages}
           </span>
-          <Button asChild variant="outline" size="sm" aria-disabled={!hasNext}>
-            <Link href={hasNext ? pageHref(page + 1) : pageHref(page)}>
+          {hasNext ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href={pageHref(page + 1)}>다음</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" disabled>
               다음
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
       )}
     </div>

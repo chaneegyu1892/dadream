@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/server';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { MemberContactRow, MemberPrivateRow, MemberRow, VisitRow } from '@/types/db';
 
 interface MemberDetailPageProps {
   params: Promise<{ id: string }>;
@@ -26,7 +25,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
     .single();
 
   if (!memberData) notFound();
-  const member = memberData as unknown as MemberRow & { cells: { name: string } | null };
+  const member = memberData;
 
   const isSelf = session.memberId === id;
   const fields = visibleFields(session.role, isSelf);
@@ -51,9 +50,9 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
       : Promise.resolve({ data: null }),
   ]);
 
-  const contact = contactRes.data as MemberContactRow | null;
-  const priv = privateRes.data as MemberPrivateRow | null;
-  const visits = (visitsRes.data ?? []) as VisitRow[];
+  const contact = contactRes.data;
+  const priv = privateRes.data;
+  const visits = visitsRes.data ?? [];
   const photoUrls = member.photo_path ? await getSignedPhotoUrls([member.photo_path]) : new Map<string, string>();
   const photoUrl = member.photo_path ? (photoUrls.get(member.photo_path) ?? null) : null;
 

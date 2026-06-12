@@ -16,12 +16,7 @@ export default async function MeetingsPage() {
     .select('id, title, meeting_date, meeting_items(done)')
     .order('meeting_date', { ascending: false });
 
-  const meetings = (data ?? []) as unknown as {
-    id: string;
-    title: string;
-    meeting_date: string;
-    meeting_items: { done: boolean }[];
-  }[];
+  const meetings = data ?? [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">

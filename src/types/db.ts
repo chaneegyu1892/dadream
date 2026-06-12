@@ -60,6 +60,7 @@ export interface VisitRow {
   confirmed_at: string | null;
   decline_reason: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationRow {

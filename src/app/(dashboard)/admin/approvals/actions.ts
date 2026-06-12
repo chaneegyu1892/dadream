@@ -35,10 +35,14 @@ export async function approveProfile(input: ApproveInput): Promise<{ error?: str
   let memberId = parsed.data.memberId ?? null;
 
   if (!memberId) {
+    const newMemberName = parsed.data.newMemberName;
+    if (!newMemberName) {
+      return { error: '연결할 명부를 선택하거나 새 이름을 입력해주세요.' };
+    }
     const { data: created, error: insertError } = await supabase
       .from('members')
       .insert({
-        name: parsed.data.newMemberName,
+        name: newMemberName,
         cell_id: parsed.data.newMemberCellId ?? null,
         is_officer: roleAtLeast(parsed.data.role, 'officer'),
       })

@@ -4,7 +4,6 @@ import { roleAtLeast } from '@/lib/roles';
 import { sundayOf } from '@/lib/weeks';
 import { createClient } from '@/lib/supabase/server';
 import { ServiceBoard } from '@/components/service-board';
-import type { MemberRow } from '@/types/db';
 
 interface ServicePageProps {
   searchParams: Promise<{ week?: string }>;
@@ -31,14 +30,8 @@ export default async function ServicePage({ searchParams }: ServicePageProps) {
   ]);
 
   const roles = rolesRes.data ?? [];
-  const assignments = (assignRes.data ?? []) as unknown as {
-    id: string;
-    service_date: string;
-    role_id: string;
-    member_id: string;
-    members: { name: string } | null;
-  }[];
-  const members = (membersRes.data ?? []) as Pick<MemberRow, 'id' | 'name'>[];
+  const assignments = assignRes.data ?? [];
+  const members = membersRes.data ?? [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">

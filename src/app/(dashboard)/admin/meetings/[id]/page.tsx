@@ -26,14 +26,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
 
   if (!meetingRes.data) notFound();
   const meeting = meetingRes.data;
-  const items = (itemsRes.data ?? []) as unknown as {
-    id: string;
-    content: string;
-    done: boolean;
-    carried_from: string | null;
-    assignee_member_id: string | null;
-    members: { name: string } | null;
-  }[];
+  const items = itemsRes.data ?? [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -53,7 +46,7 @@ export default async function MeetingDetailPage({ params }: MeetingDetailPagePro
           carried: Boolean(i.carried_from),
           assigneeName: i.members?.name ?? null,
         }))}
-        officers={(membersRes.data ?? []) as { id: string; name: string }[]}
+        officers={membersRes.data ?? []}
       />
     </div>
   );

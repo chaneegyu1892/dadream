@@ -3,7 +3,6 @@ import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 import { WeddingList } from '@/components/wedding-list';
-import type { MemberRow } from '@/types/db';
 
 export default async function WeddingsPage() {
   const session = await getSessionProfile();
@@ -18,14 +17,7 @@ export default async function WeddingsPage() {
     supabase.from('members').select('id, name').eq('active', true).order('name'),
   ]);
 
-  const weddings = (weddingsRes.data ?? []) as unknown as {
-    id: string;
-    partner_name: string | null;
-    wedding_date: string | null;
-    venue: string | null;
-    note: string | null;
-    members: { name: string; cells: { name: string } | null } | null;
-  }[];
+  const weddings = weddingsRes.data ?? [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -46,7 +38,7 @@ export default async function WeddingsPage() {
           venue: w.venue,
           note: w.note,
         }))}
-        members={(membersRes.data ?? []) as Pick<MemberRow, 'id' | 'name'>[]}
+        members={membersRes.data ?? []}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
-import { ROLE_LABELS } from '@/lib/roles';
+import { ROLE_LABELS, roleAtLeast } from '@/lib/roles';
 import { formatSlot, VISIT_STATUS_LABELS } from '@/lib/visits';
 import { sundayOf } from '@/lib/weeks';
 import { createClient } from '@/lib/supabase/server';
@@ -54,6 +54,8 @@ export default async function HomePage() {
     members: { name: string } | null;
   }[];
   const isPastor = profile.role === 'pastor';
+  // staff(부장/부감)도 RLS상 모든 심방을 보므로 제목을 그에 맞춘다
+  const seesAllVisits = roleAtLeast(profile.role, 'staff');
 
   function serviceSummary(week: string): string {
     const entries = services
@@ -129,13 +131,13 @@ export default async function HomePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {isPastor ? '처리할 심방 신청' : '내 심방 현황'}
+            {isPastor ? '처리할 심방 신청' : seesAllVisits ? '전체 심방 현황' : '내 심방 현황'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {visits.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {isPastor ? '대기 중인 신청이 없어요.' : '진행 중인 심방이 없어요.'}
+              {seesAllVisits ? '대기 중인 신청이 없어요.' : '진행 중인 심방이 없어요.'}
             </p>
           ) : (
             <div className="space-y-2 text-sm">

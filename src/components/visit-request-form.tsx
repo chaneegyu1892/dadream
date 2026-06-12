@@ -23,14 +23,16 @@ interface VisitRequestFormProps {
   proxyMembers: { id: string; name: string }[] | null;
 }
 
-type SlotDraft = { date: string; timeOfDay: PreferredSlot['timeOfDay'] | '' };
+type SlotDraft = { key: string; date: string; timeOfDay: PreferredSlot['timeOfDay'] | '' };
 
-const EMPTY_SLOT: SlotDraft = { date: '', timeOfDay: '' };
+function newSlot(): SlotDraft {
+  return { key: crypto.randomUUID(), date: '', timeOfDay: '' };
+}
 
 export function VisitRequestForm({ selfMemberId, proxyMembers }: VisitRequestFormProps) {
   const router = useRouter();
   const [memberId, setMemberId] = useState<string>(selfMemberId ?? '');
-  const [slots, setSlots] = useState<SlotDraft[]>([{ ...EMPTY_SLOT }]);
+  const [slots, setSlots] = useState<SlotDraft[]>(() => [newSlot()]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -86,7 +88,7 @@ export function VisitRequestForm({ selfMemberId, proxyMembers }: VisitRequestFor
         <Label>희망 시간 (최대 3개)</Label>
         <div className="space-y-2">
           {slots.map((slot, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={slot.key} className="flex gap-2">
               <Input
                 type="date"
                 value={slot.date}
@@ -117,7 +119,7 @@ export function VisitRequestForm({ selfMemberId, proxyMembers }: VisitRequestFor
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setSlots((prev) => [...prev, { ...EMPTY_SLOT }])}
+            onClick={() => setSlots((prev) => [...prev, newSlot()])}
           >
             + 희망 시간 추가
           </Button>
