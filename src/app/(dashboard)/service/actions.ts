@@ -71,10 +71,8 @@ export async function addServiceRole(input: { name: string }): Promise<{ error?:
   if (!parsed.success) return { error: '직책 이름을 확인해주세요.' };
 
   const supabase = await createClient();
-  const { count } = await supabase.from('service_roles').select('*', { count: 'exact', head: true });
-  const { error } = await supabase
-    .from('service_roles')
-    .insert({ name: parsed.data.name, sort_order: (count ?? 0) + 1 });
+  // sort_order 계산과 INSERT를 DB에서 원자적으로 처리
+  const { error } = await supabase.rpc('add_service_role_tx', { p_name: parsed.data.name });
 
   if (error) {
     return { error: error.code === '23505' ? '이미 있는 직책이에요.' : '추가에 실패했어요.' };

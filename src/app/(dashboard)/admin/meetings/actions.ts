@@ -90,16 +90,11 @@ export async function addMeetingItem(input: z.infer<typeof addItemSchema>): Prom
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? '입력값을 확인해주세요.' };
 
   const supabase = await createClient();
-  const { count } = await supabase
-    .from('meeting_items')
-    .select('*', { count: 'exact', head: true })
-    .eq('meeting_id', parsed.data.meetingId);
-
-  const { error } = await supabase.from('meeting_items').insert({
-    meeting_id: parsed.data.meetingId,
-    content: parsed.data.content,
-    assignee_member_id: parsed.data.assigneeMemberId,
-    sort_order: (count ?? 0) + 1,
+  // sort_order 계산과 INSERT를 DB에서 원자적으로 처리
+  const { error } = await supabase.rpc('add_meeting_item_tx', {
+    p_meeting_id: parsed.data.meetingId,
+    p_content: parsed.data.content,
+    p_assignee_member_id: parsed.data.assigneeMemberId ?? undefined,
   });
 
   if (error) return { error: '항목 추가에 실패했어요.' };

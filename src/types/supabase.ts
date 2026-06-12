@@ -527,6 +527,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_meeting_item_tx: {
+        Args: {
+          p_assignee_member_id?: string
+          p_content: string
+          p_meeting_id: string
+        }
+        Returns: undefined
+      }
+      add_service_role_tx: { Args: { p_name: string }; Returns: undefined }
+      approve_profile_tx: {
+        Args: {
+          p_member_id?: string
+          p_new_member_cell_id?: string
+          p_new_member_name?: string
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: undefined
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]

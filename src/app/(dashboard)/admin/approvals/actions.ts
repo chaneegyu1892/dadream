@@ -32,35 +32,18 @@ export async function approveProfile(input: ApproveInput): Promise<{ error?: str
   }
 
   const supabase = await createClient();
-  let memberId = parsed.data.memberId ?? null;
 
-  if (!memberId) {
-    const newMemberName = parsed.data.newMemberName;
-    if (!newMemberName) {
-      return { error: '연결할 명부를 선택하거나 새 이름을 입력해주세요.' };
-    }
-    const { data: created, error: insertError } = await supabase
-      .from('members')
-      .insert({
-        name: newMemberName,
-        cell_id: parsed.data.newMemberCellId ?? null,
-        is_officer: roleAtLeast(parsed.data.role, 'officer'),
-      })
-      .select('id')
-      .single();
+  // 명부 등록 + 프로필 승인을 DB 단일 트랜잭션으로 처리 (고아 member 방지)
+  const { error: txError } = await supabase.rpc('approve_profile_tx', {
+    p_profile_id: parsed.data.profileId,
+    p_role: parsed.data.role,
+    p_member_id: parsed.data.memberId,
+    p_new_member_name: parsed.data.newMemberName,
+    p_new_member_cell_id: parsed.data.newMemberCellId ?? undefined,
+  });
 
-    if (insertError || !created) {
-      return { error: '명부 등록에 실패했어요. 잠시 후 다시 시도해주세요.' };
-    }
-    memberId = created.id;
-  }
-
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ approval: 'approved', role: parsed.data.role, member_id: memberId })
-    .eq('id', parsed.data.profileId);
-
-  if (updateError) {
+  if (txError) {
+    console.error('[approveProfile] approve_profile_tx 실패:', txError.message);
     return { error: '승인 처리에 실패했어요. 이미 처리됐는지 확인해주세요.' };
   }
 
