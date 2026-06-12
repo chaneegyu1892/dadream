@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { getCurrentMonthWindow } from '@/lib/dashboard-query';
+import { getKoreanHolidaysInRange } from '@/lib/korean-holidays';
 import { formatSlot, VISIT_STATUS_LABELS } from '@/lib/visits';
 import { createClient } from '@/lib/supabase/server';
 import { VisitCalendar, type CalendarItem } from '@/components/visit-calendar';
@@ -62,9 +63,16 @@ export default async function VisitsPage() {
   const calendarVisits = (calendarVisitsRes.data ?? []) as unknown as CalendarVisitRow[];
   const actionable = (activeVisitsRes.data ?? []) as unknown as VisitWithName[];
   const past = (pastVisitsRes.data ?? []) as unknown as VisitWithName[];
+  const holidays = getKoreanHolidaysInRange(calendarFrom, calendarTo);
   const isPastor = session.role === 'pastor';
 
   const calendarItems: CalendarItem[] = [
+    ...holidays.map((holiday) => ({
+      id: holiday.id,
+      date: holiday.date,
+      title: holiday.title,
+      kind: 'holiday' as const,
+    })),
     ...events.map((e) => ({ id: e.id, date: e.starts_at, title: e.title, kind: 'event' as const })),
     ...calendarVisits
       .filter((v) => v.confirmed_at)
