@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { parseCalendarEventInput, type CalendarEventInput } from '@/lib/events';
 import { roleAtLeast } from '@/lib/roles';
 import { canTransition, formatSlot, slotToIso, type PreferredSlot, type VisitStatus } from '@/lib/visits';
 import { createClient } from '@/lib/supabase/server';
 import type { VisitRow } from '@/types/db';
-import type { TablesUpdate } from '@/types/supabase';
+import type { TablesInsert, TablesUpdate } from '@/types/supabase';
 
 const slotSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -21,6 +22,43 @@ const createSchema = z.object({
 });
 
 export type CreateVisitInput = z.infer<typeof createSchema>;
+
+async function requireApprovedOfficer(): Promise<{ error?: string; userId?: string }> {
+  const session = await getSessionProfile();
+  if (!session || session.approval !== 'approved' || !roleAtLeast(session.role, 'officer')) {
+    return { error: '임원 권한이 필요해요.' };
+  }
+  return { userId: session.userId };
+}
+
+export async function createCalendarEvent(input: CalendarEventInput): Promise<{ error?: string }> {
+  const auth = await requireApprovedOfficer();
+  if (auth.error || !auth.userId) return { error: auth.error ?? '임원 권한이 필요해요.' };
+
+  const parsed = parseCalendarEventInput(input);
+  if ('error' in parsed) return parsed;
+
+  const event: TablesInsert<'events'> = {
+    title: parsed.title,
+    starts_at: parsed.startsAt,
+    ends_at: parsed.endsAt,
+    location: parsed.location,
+    description: parsed.description,
+    color: parsed.color,
+    created_by: auth.userId,
+  };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('events').insert(event);
+
+  if (error) {
+    return { error: '일정 추가에 실패했어요. 잠시 후 다시 시도해주세요.' };
+  }
+
+  revalidatePath('/visits');
+  revalidatePath('/');
+  return {};
+}
 
 export async function createVisitRequest(input: CreateVisitInput): Promise<{ error?: string }> {
   const session = await getSessionProfile();

@@ -36,6 +36,7 @@ export type Database = {
       }
       events: {
         Row: {
+          color: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -46,6 +47,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           title: string
         }
         Update: {
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null

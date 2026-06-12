@@ -2,9 +2,12 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { getCurrentMonthWindow } from '@/lib/dashboard-query';
+import { normalizeEventColor } from '@/lib/events';
 import { getKoreanHolidaysInRange } from '@/lib/korean-holidays';
+import { roleAtLeast } from '@/lib/roles';
 import { formatSlot, VISIT_STATUS_LABELS } from '@/lib/visits';
 import { createClient } from '@/lib/supabase/server';
+import { CalendarEventForm } from '@/components/calendar-event-form';
 import { VisitCalendar, type CalendarItem } from '@/components/visit-calendar';
 import { VisitActions } from '@/components/visit-actions';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +31,7 @@ export default async function VisitsPage() {
   const [eventsRes, calendarVisitsRes, activeVisitsRes, pastVisitsRes] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, starts_at, ends_at, location, description')
+      .select('id, title, starts_at, ends_at, location, description, color')
       .gte('starts_at', calendarFrom)
       .lte('starts_at', calendarTo)
       .order('starts_at')
@@ -65,6 +68,7 @@ export default async function VisitsPage() {
   const past = (pastVisitsRes.data ?? []) as unknown as VisitWithName[];
   const holidays = getKoreanHolidaysInRange(calendarFrom, calendarTo);
   const isPastor = session.role === 'pastor';
+  const canEditEvents = session.approval === 'approved' && roleAtLeast(session.role, 'officer');
 
   const calendarItems: CalendarItem[] = [
     ...holidays.map((holiday) => ({
@@ -73,7 +77,13 @@ export default async function VisitsPage() {
       title: holiday.title,
       kind: 'holiday' as const,
     })),
-    ...events.map((e) => ({ id: e.id, date: e.starts_at, title: e.title, kind: 'event' as const })),
+    ...events.map((e) => ({
+      id: e.id,
+      date: e.starts_at,
+      title: e.title,
+      kind: 'event' as const,
+      color: normalizeEventColor(e.color),
+    })),
     ...calendarVisits
       .filter((v) => v.confirmed_at)
       .map((v) => ({
@@ -91,9 +101,12 @@ export default async function VisitsPage() {
           <h1 className="text-2xl font-bold">캘린더</h1>
           <p className="mt-1 text-sm text-muted-foreground">청년부 일정과 심방 일정이에요.</p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/visits/new">심방 신청</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/visits/new">심방 신청</Link>
+          </Button>
+          {canEditEvents && <CalendarEventForm />}
+        </div>
       </header>
 
       <VisitCalendar items={calendarItems} />

@@ -14,6 +14,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import type { EventColor } from '@/lib/events';
 import { cn } from '@/lib/utils';
 
 export interface CalendarItem {
@@ -21,9 +22,18 @@ export interface CalendarItem {
   date: string; // ISO
   title: string;
   kind: 'event' | 'visit' | 'holiday';
+  color?: EventColor;
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const EVENT_COLOR_CLASS: Record<EventColor, string> = {
+  sky: 'bg-sky-100 text-sky-900',
+  emerald: 'bg-emerald-100 text-emerald-900',
+  amber: 'bg-amber-100 text-amber-900',
+  violet: 'bg-violet-100 text-violet-900',
+  pink: 'bg-pink-100 text-pink-900',
+};
 
 export function VisitCalendar({ items }: { items: CalendarItem[] }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -96,7 +106,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                     key={item.id}
                     className={cn(
                       'truncate rounded px-1 py-px leading-tight',
-                      calendarItemClassName(item.kind),
+                      calendarItemClassName(item),
                     )}
                     title={item.title}
                   >
@@ -126,7 +136,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                   key={item.id}
                   className={cn(
                     'rounded-lg px-3 py-2 text-sm',
-                    calendarItemClassName(item.kind),
+                    calendarItemClassName(item),
                   )}
                 >
                   <span className="mr-1.5 text-xs">{calendarItemLabel(item.kind)}</span>
@@ -141,10 +151,10 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
   );
 }
 
-function calendarItemClassName(kind: CalendarItem['kind']) {
-  if (kind === 'visit') return 'bg-amber-100 text-amber-900';
-  if (kind === 'holiday') return 'bg-red-100 text-red-900';
-  return 'bg-sky-100 text-sky-900';
+function calendarItemClassName(item: CalendarItem) {
+  if (item.kind === 'visit') return 'bg-amber-100 text-amber-900';
+  if (item.kind === 'holiday') return 'bg-red-100 text-red-900';
+  return EVENT_COLOR_CLASS[item.color ?? 'sky'];
 }
 
 function calendarItemLabel(kind: CalendarItem['kind']) {
