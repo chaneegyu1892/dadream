@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { createMember } from '@/app/(dashboard)/members/new/actions';
+import { compressPhoto } from '@/lib/compress-photo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,10 @@ export function MemberForm({ cells }: MemberFormProps) {
     setError(null);
     if (cellId !== 'none') formData.set('cellId', cellId);
     startTransition(async () => {
+      const photo = formData.get('photo');
+      if (photo instanceof File && photo.size > 0) {
+        formData.set('photo', await compressPhoto(photo));
+      }
       const result = await createMember(formData);
       if (result.error) {
         setError(result.error);
@@ -78,7 +83,7 @@ export function MemberForm({ cells }: MemberFormProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="photo">사진 (5MB 이하)</Label>
+        <Label htmlFor="photo">사진 (자동으로 용량을 줄여 올려요)</Label>
         <Input id="photo" name="photo" type="file" accept="image/*" />
       </div>
 
