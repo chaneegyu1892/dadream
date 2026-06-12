@@ -49,13 +49,8 @@ export function parseMemberSearchParams(searchParams: Record<string, SearchParam
 
 export function getCurrentMonthWindow(now = new Date()): DateWindow {
   const kstNow = toKstDateParts(now);
-  const monthStart = new Date(Date.UTC(kstNow.year, kstNow.month - 1, 1));
-  const monthEnd = new Date(Date.UTC(kstNow.year, kstNow.month, 0));
-
-  // A small buffer keeps the initially visible calendar grid complete while
-  // avoiding an unbounded events/visits scan.
-  monthStart.setUTCDate(monthStart.getUTCDate() - 7);
-  monthEnd.setUTCDate(monthEnd.getUTCDate() + 5);
+  const monthStart = new Date(Date.UTC(kstNow.year, kstNow.month - 2, 1));
+  const monthEnd = new Date(Date.UTC(kstNow.year, kstNow.month + 1, 0));
 
   return {
     from: formatKstDateTime(monthStart, false),
