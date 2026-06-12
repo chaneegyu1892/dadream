@@ -24,7 +24,7 @@ export function Nav({ role }: { role: UserRole }) {
   return (
     <>
       {/* 모바일: 하단 탭바 */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
         {items.map((item) => (
           <Link
             key={item.href}
