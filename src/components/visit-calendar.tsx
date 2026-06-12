@@ -20,7 +20,7 @@ export interface CalendarItem {
   id: string;
   date: string; // ISO
   title: string;
-  kind: 'event' | 'visit';
+  kind: 'event' | 'visit' | 'holiday';
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -69,6 +69,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
         {days.map((day) => {
           const dayItems = itemsOn(day);
           const isSelected = selectedDay !== null && isSameDay(day, selectedDay);
+          const isHoliday = dayItems.some((item) => item.kind === 'holiday');
           return (
             <button
               key={day.toISOString()}
@@ -84,7 +85,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                 className={cn(
                   'inline-flex size-5 items-center justify-center rounded-full',
                   isToday(day) && 'bg-primary font-semibold text-primary-foreground',
-                  day.getDay() === 0 && !isToday(day) && 'text-red-500',
+                  (day.getDay() === 0 || isHoliday) && !isToday(day) && 'text-red-500',
                 )}
               >
                 {format(day, 'd')}
@@ -95,9 +96,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                     key={item.id}
                     className={cn(
                       'truncate rounded px-1 py-px leading-tight',
-                      item.kind === 'visit'
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-sky-100 text-sky-900',
+                      calendarItemClassName(item.kind),
                     )}
                     title={item.title}
                   >
@@ -127,10 +126,10 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                   key={item.id}
                   className={cn(
                     'rounded-lg px-3 py-2 text-sm',
-                    item.kind === 'visit' ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900',
+                    calendarItemClassName(item.kind),
                   )}
                 >
-                  <span className="mr-1.5 text-xs">{item.kind === 'visit' ? '🏠 심방' : '📅 일정'}</span>
+                  <span className="mr-1.5 text-xs">{calendarItemLabel(item.kind)}</span>
                   {item.title}
                 </div>
               ))}
@@ -140,4 +139,16 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
       )}
     </div>
   );
+}
+
+function calendarItemClassName(kind: CalendarItem['kind']) {
+  if (kind === 'visit') return 'bg-amber-100 text-amber-900';
+  if (kind === 'holiday') return 'bg-red-100 text-red-900';
+  return 'bg-sky-100 text-sky-900';
+}
+
+function calendarItemLabel(kind: CalendarItem['kind']) {
+  if (kind === 'visit') return '🏠 심방';
+  if (kind === 'holiday') return '🇰🇷 공휴일';
+  return '📅 일정';
 }
