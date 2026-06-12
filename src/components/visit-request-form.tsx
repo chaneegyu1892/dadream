@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { createVisitRequest } from '@/app/(dashboard)/visits/actions';
 import { TIME_OF_DAY_LABELS, type PreferredSlot } from '@/lib/visits';
+import { MemberPicker } from '@/components/member-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,19 +69,16 @@ export function VisitRequestForm({ selfMemberId, proxyMembers }: VisitRequestFor
       {proxyMembers && (
         <div className="space-y-1.5">
           <Label>대상 청년</Label>
-          <Select value={memberId} onValueChange={setMemberId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="청년 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {proxyMembers.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name}
-                  {m.id === selfMemberId ? ' (나)' : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MemberPicker
+            items={proxyMembers.map((m) => ({
+              id: m.id,
+              name: m.name,
+              description: m.id === selfMemberId ? '나' : null,
+            }))}
+            value={memberId || null}
+            onSelect={setMemberId}
+            title="심방 대상 청년"
+          />
         </div>
       )}
 

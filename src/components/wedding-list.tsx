@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { createWedding, deleteWedding } from '@/app/(dashboard)/admin/weddings/actions';
+import { MemberPicker } from '@/components/member-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,13 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface WeddingEntry {
   id: string;
@@ -99,18 +93,12 @@ export function WeddingList({ weddings, members }: WeddingListProps) {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>청년</Label>
-              <Select value={memberId} onValueChange={setMemberId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="청년 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MemberPicker
+                items={members}
+                value={memberId || null}
+                onSelect={setMemberId}
+                title="결혼 예정 청년"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="partner">배우자 이름</Label>

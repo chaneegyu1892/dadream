@@ -9,16 +9,10 @@ import {
   removeServiceRole,
   unassignService,
 } from '@/app/(dashboard)/service/actions';
+import { MemberPicker } from '@/components/member-picker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface ServiceBoardProps {
   selectedWeek: string; // YYYY-MM-DD (일요일)
@@ -38,7 +32,6 @@ export function ServiceBoard({
   canEdit,
 }: ServiceBoardProps) {
   const router = useRouter();
-  const [pickFor, setPickFor] = useState<string | null>(null);
   const [newRole, setNewRole] = useState('');
   const [manageRoles, setManageRoles] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,29 +97,18 @@ export function ServiceBoard({
               </div>
               {canEdit && (
                 <div className="shrink-0">
-                  {pickFor === role.id ? (
-                    <Select
-                      onValueChange={(memberId) => {
-                        setPickFor(null);
-                        run(() => assignService({ serviceDate: selectedWeek, roleId: role.id, memberId }));
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-32">
-                        <SelectValue placeholder="청년 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {members.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Button variant="ghost" size="sm" onClick={() => setPickFor(role.id)}>
-                      + 배정
-                    </Button>
-                  )}
+                  <MemberPicker
+                    items={members}
+                    onSelect={(memberId) =>
+                      run(() => assignService({ serviceDate: selectedWeek, roleId: role.id, memberId }))
+                    }
+                    title={`${role.name} 배정`}
+                    trigger={
+                      <Button variant="ghost" size="sm" disabled={isPending}>
+                        + 배정
+                      </Button>
+                    }
+                  />
                 </div>
               )}
             </div>

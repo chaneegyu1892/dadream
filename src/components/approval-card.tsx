@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { approveProfile, rejectProfile } from '@/app/(dashboard)/admin/approvals/actions';
+import { MemberPicker } from '@/components/member-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -74,21 +75,20 @@ export function ApprovalCard({ profile, candidates, allUnlinked, cells }: Approv
       <CardContent className="space-y-3">
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">명부 연결</p>
-          <Select value={memberId} onValueChange={setMemberId}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                  {c.cellName ? ` (${c.cellName})` : ''}
-                  {candidates.some((cand) => cand.id === c.id) ? ' · 추천' : ''}
-                </SelectItem>
-              ))}
-              <SelectItem value={NEW_MEMBER}>➕ 명부에 새로 등록</SelectItem>
-            </SelectContent>
-          </Select>
+          <MemberPicker
+            items={options.map((c) => ({
+              id: c.id,
+              name: c.name,
+              description:
+                [c.cellName, candidates.some((cand) => cand.id === c.id) ? '추천' : null]
+                  .filter(Boolean)
+                  .join(' · ') || null,
+            }))}
+            pinnedItems={[{ id: NEW_MEMBER, name: '➕ 명부에 새로 등록' }]}
+            value={memberId}
+            onSelect={setMemberId}
+            title="명부 연결"
+          />
         </div>
 
         {memberId === NEW_MEMBER && (
