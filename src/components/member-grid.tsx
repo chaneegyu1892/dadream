@@ -81,6 +81,7 @@ export function MemberGrid({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">전체 셀</SelectItem>
+              <SelectItem value="unassigned">무소속</SelectItem>
               {cells.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}

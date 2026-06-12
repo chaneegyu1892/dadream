@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  buildCellSummaries,
   getCurrentMonthWindow,
   getPageRange,
   parseMemberSearchParams,
@@ -40,6 +41,49 @@ describe('parseMemberSearchParams', () => {
       cellId: 'all',
       page: 1,
     });
+  });
+
+  it('무소속 셀 필터를 보존한다', () => {
+    expect(parseMemberSearchParams({ cell: 'unassigned' })).toEqual({
+      query: '',
+      cellId: 'unassigned',
+      page: 1,
+    });
+  });
+});
+
+describe('buildCellSummaries', () => {
+  const cells = [
+    { id: 'cell-2', name: '2셀', sort_order: 2 },
+    { id: 'cell-1', name: '1셀', sort_order: 1 },
+  ];
+
+  it('무소속을 먼저 두고 셀 sort_order 순서로 요약한다', () => {
+    const summaries = buildCellSummaries(cells, [
+      { id: 'm1', name: '김무소', cell_id: null, duty: null, is_officer: false },
+      { id: 'm2', name: '이리더', cell_id: 'cell-1', duty: '셀리더', is_officer: true },
+      { id: 'm3', name: '박멤버', cell_id: 'cell-1', duty: null, is_officer: false },
+    ]);
+
+    expect(summaries.map((s) => s.name)).toEqual(['무소속', '1셀', '2셀']);
+    expect(summaries[0]).toMatchObject({ id: null, memberCount: 1, leaderNames: [] });
+    expect(summaries[1]).toMatchObject({
+      id: 'cell-1',
+      memberCount: 2,
+      officerCount: 1,
+      leaderNames: ['이리더'],
+    });
+    expect(summaries[2]).toMatchObject({ id: 'cell-2', memberCount: 0 });
+  });
+
+  it('셀리더/셀장/목자 직분을 셀 리더로 인식한다', () => {
+    const summaries = buildCellSummaries(cells.slice(0, 1), [
+      { id: 'm1', name: '김셀장', cell_id: 'cell-2', duty: '셀장', is_officer: false },
+      { id: 'm2', name: '이목자', cell_id: 'cell-2', duty: '청년부 목자', is_officer: false },
+      { id: 'm3', name: '박팀장', cell_id: 'cell-2', duty: '찬양팀 리더', is_officer: false },
+    ]);
+
+    expect(summaries[1].leaderNames).toEqual(['김셀장', '이목자']);
   });
 });
 

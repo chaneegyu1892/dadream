@@ -19,6 +19,29 @@ export interface DateWindow {
   to: string;
 }
 
+export interface CellSummaryInput {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+export interface CellMemberSummaryInput {
+  id: string;
+  name: string;
+  cell_id: string | null;
+  duty: string | null;
+  is_officer: boolean;
+}
+
+export interface CellSummary {
+  id: string | null;
+  name: string;
+  sortOrder: number;
+  memberCount: number;
+  officerCount: number;
+  leaderNames: string[];
+}
+
 function firstParam(value: SearchParamValue): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
@@ -45,6 +68,54 @@ export function parseMemberSearchParams(searchParams: Record<string, SearchParam
     cellId,
     page: parsePositivePage(searchParams.page),
   };
+}
+
+export function buildCellSummaries(
+  cells: CellSummaryInput[],
+  members: CellMemberSummaryInput[],
+): CellSummary[] {
+  const summaries = new Map<string | null, CellSummary>();
+
+  summaries.set(null, {
+    id: null,
+    name: '무소속',
+    sortOrder: -1,
+    memberCount: 0,
+    officerCount: 0,
+    leaderNames: [],
+  });
+
+  for (const cell of [...cells].sort(compareCells)) {
+    summaries.set(cell.id, {
+      id: cell.id,
+      name: cell.name,
+      sortOrder: cell.sort_order,
+      memberCount: 0,
+      officerCount: 0,
+      leaderNames: [],
+    });
+  }
+
+  for (const member of members) {
+    const summary = summaries.get(member.cell_id) ?? summaries.get(null);
+    if (!summary) continue;
+
+    summary.memberCount += 1;
+    if (member.is_officer) summary.officerCount += 1;
+    if (isCellLeaderDuty(member.duty)) summary.leaderNames.push(member.name);
+  }
+
+  return Array.from(summaries.values());
+}
+
+function compareCells(a: CellSummaryInput, b: CellSummaryInput): number {
+  if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+  return a.name.localeCompare(b.name, 'ko-KR', { numeric: true });
+}
+
+function isCellLeaderDuty(duty: string | null): boolean {
+  if (!duty) return false;
+  return /셀\s*리더|셀장|목자/.test(duty);
 }
 
 export function getCurrentMonthWindow(now = new Date()): DateWindow {
