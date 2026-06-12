@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
+import { getCurrentMonthWindow } from '@/lib/dashboard-query';
 import { formatSlot, VISIT_STATUS_LABELS } from '@/lib/visits';
 import { createClient } from '@/lib/supabase/server';
 import { VisitCalendar, type CalendarItem } from '@/components/visit-calendar';
@@ -11,33 +12,62 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { EventRow, VisitRow } from '@/types/db';
 
 type VisitWithName = VisitRow & { members: { name: string } | null };
+type CalendarVisitRow = Pick<VisitRow, 'id' | 'confirmed_at'> & { members: { name: string } | null };
+
+const ACTIVE_VISIT_STATUSES = ['requested', 'proposed', 'confirmed'] as const;
+const PAST_VISIT_STATUSES = ['completed', 'declined', 'cancelled'] as const;
+const PAST_VISIT_LIMIT = 20;
 
 export default async function VisitsPage() {
   const session = await getSessionProfile();
   if (!session) redirect('/login');
 
   const supabase = await createClient();
-  const [eventsRes, visitsRes] = await Promise.all([
+  const { from: calendarFrom, to: calendarTo } = getCurrentMonthWindow();
+  const [eventsRes, calendarVisitsRes, activeVisitsRes, pastVisitsRes] = await Promise.all([
     supabase
       .from('events')
       .select('id, title, starts_at, ends_at, location, description')
-      .order('starts_at'),
+      .gte('starts_at', calendarFrom)
+      .lte('starts_at', calendarTo)
+      .order('starts_at')
+      .limit(100),
+    supabase
+      .from('visit_requests')
+      .select('id, confirmed_at, members(name)')
+      .not('confirmed_at', 'is', null)
+      .gte('confirmed_at', calendarFrom)
+      .lte('confirmed_at', calendarTo)
+      .order('confirmed_at')
+      .limit(100),
     supabase
       .from('visit_requests')
       .select(
         'id, member_id, requested_by, preferred_slots, message, status, proposed_slot, confirmed_at, decline_reason, created_at, members(name)',
       )
-      .order('created_at', { ascending: false }),
+      .in('status', ACTIVE_VISIT_STATUSES)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('visit_requests')
+      .select(
+        'id, member_id, requested_by, preferred_slots, message, status, proposed_slot, confirmed_at, decline_reason, created_at, members(name)',
+      )
+      .in('status', PAST_VISIT_STATUSES)
+      .order('created_at', { ascending: false })
+      .limit(PAST_VISIT_LIMIT),
   ]);
 
   const events = (eventsRes.data ?? []) as EventRow[];
-  const visits = (visitsRes.data ?? []) as unknown as VisitWithName[];
+  const calendarVisits = (calendarVisitsRes.data ?? []) as unknown as CalendarVisitRow[];
+  const actionable = (activeVisitsRes.data ?? []) as unknown as VisitWithName[];
+  const past = (pastVisitsRes.data ?? []) as unknown as VisitWithName[];
   const isPastor = session.role === 'pastor';
 
   const calendarItems: CalendarItem[] = [
     ...events.map((e) => ({ id: e.id, date: e.starts_at, title: e.title, kind: 'event' as const })),
-    ...visits
-      .filter((v) => v.status === 'confirmed' && v.confirmed_at)
+    ...calendarVisits
+      .filter((v) => v.confirmed_at)
       .map((v) => ({
         id: v.id,
         date: v.confirmed_at as string,
@@ -45,13 +75,6 @@ export default async function VisitsPage() {
         kind: 'visit' as const,
       })),
   ];
-
-  const actionable = visits.filter((v) =>
-    isPastor
-      ? v.status === 'requested' || v.status === 'proposed' || v.status === 'confirmed'
-      : v.status === 'requested' || v.status === 'proposed' || v.status === 'confirmed',
-  );
-  const past = visits.filter((v) => ['completed', 'declined', 'cancelled'].includes(v.status));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -115,7 +138,7 @@ export default async function VisitsPage() {
 
       {past.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-semibold">지난 심방</h2>
+          <h2 className="font-semibold">지난 심방 최근 {PAST_VISIT_LIMIT}건</h2>
           {past.map((v) => (
             <div key={v.id} className="flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm">
               <span>{v.members?.name ?? '이름 없음'}</span>

@@ -47,6 +47,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
           .select('id, member_id, requested_by, preferred_slots, message, status, proposed_slot, confirmed_at, decline_reason, created_at')
           .eq('member_id', id)
           .order('created_at', { ascending: false })
+          .limit(12)
       : Promise.resolve({ data: null }),
   ]);
 

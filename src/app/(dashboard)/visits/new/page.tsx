@@ -16,10 +16,10 @@ export default async function NewVisitPage() {
     const supabase = await createClient();
     const { data } = await supabase
       .from('members')
-      .select('id, name, photo_path, cell_id, duty, is_officer, active')
+      .select('id, name')
       .eq('active', true)
       .order('name');
-    members = ((data ?? []) as MemberRow[]).map((m) => ({ id: m.id, name: m.name }));
+    members = (data ?? []) as Pick<MemberRow, 'id' | 'name'>[];
   }
 
   if (!canProxy && !session.memberId) {
