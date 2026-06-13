@@ -11,7 +11,7 @@ import type { CellRow, MemberRow } from '@/types/db';
 
 const MEMBERS_PAGE_SIZE = 48;
 
-type MemberSummaryRow = Pick<MemberRow, 'id' | 'name' | 'cell_id' | 'duty' | 'is_officer'>;
+type MemberSummaryRow = Pick<MemberRow, 'id' | 'name' | 'cell_id' | 'duty'>;
 
 interface MembersPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -29,7 +29,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
       supabase.from('cells').select('id, name, sort_order').order('sort_order'),
       supabase
         .from('members')
-        .select('id, name, cell_id, duty, is_officer')
+        .select('id, name, cell_id, duty')
         .eq('active', true)
         .order('name'),
     ]);

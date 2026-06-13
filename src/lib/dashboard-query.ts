@@ -30,7 +30,6 @@ export interface CellMemberSummaryInput {
   name: string;
   cell_id: string | null;
   duty: string | null;
-  is_officer: boolean;
 }
 
 export interface CellSummary {
@@ -38,8 +37,8 @@ export interface CellSummary {
   name: string;
   sortOrder: number;
   memberCount: number;
-  officerCount: number;
   leaderNames: string[];
+  memberNames: string[];
 }
 
 function firstParam(value: SearchParamValue): string | undefined {
@@ -81,8 +80,8 @@ export function buildCellSummaries(
     name: '무소속',
     sortOrder: -1,
     memberCount: 0,
-    officerCount: 0,
     leaderNames: [],
+    memberNames: [],
   });
 
   for (const cell of [...cells].sort(compareCells)) {
@@ -91,8 +90,8 @@ export function buildCellSummaries(
       name: cell.name,
       sortOrder: cell.sort_order,
       memberCount: 0,
-      officerCount: 0,
       leaderNames: [],
+      memberNames: [],
     });
   }
 
@@ -101,8 +100,11 @@ export function buildCellSummaries(
     if (!summary) continue;
 
     summary.memberCount += 1;
-    if (member.is_officer) summary.officerCount += 1;
-    if (isCellLeaderDuty(member.duty)) summary.leaderNames.push(member.name);
+    if (isCellLeaderDuty(member.duty)) {
+      summary.leaderNames.push(member.name);
+    } else {
+      summary.memberNames.push(member.name);
+    }
   }
 
   return Array.from(summaries.values());
