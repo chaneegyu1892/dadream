@@ -37,29 +37,24 @@ export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
                 <span className="shrink-0 text-xs text-muted-foreground">보기 →</span>
               </div>
 
-              <div className="mt-3 space-y-2 text-xs">
-                <div>
-                  <p className="font-medium text-muted-foreground">셀리더</p>
-                  <p className="mt-0.5 truncate font-medium">{leaders}</p>
-                </div>
+              <div className="mt-2 space-y-1 text-xs">
+                <p className="flex items-baseline gap-1.5">
+                  <span className="shrink-0 font-medium text-muted-foreground">셀리더</span>
+                  <span className="min-w-0 truncate font-medium">{leaders}</span>
+                </p>
 
-                <div>
-                  <p className="font-medium text-muted-foreground">셀원</p>
-                  {cell.memberNames.length > 0 ? (
-                    <ul className="mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5 text-muted-foreground">
-                      {visibleMembers.map((name, index) => (
-                        <li key={`${name}-${index}`} className="leading-snug">
-                          {name}
-                        </li>
-                      ))}
-                      {hiddenMemberCount > 0 && (
-                        <li className="font-medium leading-snug text-foreground/80">+{hiddenMemberCount}명</li>
-                      )}
-                    </ul>
-                  ) : (
-                    <p className="mt-0.5 text-muted-foreground">셀원 없음</p>
-                  )}
-                </div>
+                {cell.memberNames.length > 0 && (
+                  <ul className="flex flex-wrap gap-x-1.5 gap-y-0.5 text-muted-foreground">
+                    {visibleMembers.map((name, index) => (
+                      <li key={`${name}-${index}`} className="leading-snug">
+                        {name}
+                      </li>
+                    ))}
+                    {hiddenMemberCount > 0 && (
+                      <li className="font-medium leading-snug text-foreground/80">+{hiddenMemberCount}명</li>
+                    )}
+                  </ul>
+                )}
               </div>
             </Link>
           );
