@@ -15,7 +15,7 @@ export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
         <span>{cells.length}개 그룹</span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2">
         {cells.map((cell) => {
           const href = cell.id ? `/members?cell=${cell.id}` : '/members?cell=unassigned';
           const leaders = cell.leaderNames.length > 0 ? cell.leaderNames.join(', ') : '미지정';
