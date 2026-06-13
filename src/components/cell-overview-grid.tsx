@@ -5,7 +5,7 @@ interface CellOverviewGridProps {
   cells: CellSummary[];
 }
 
-const MEMBER_PREVIEW_LIMIT = 8;
+const MEMBER_PREVIEW_LIMIT = 6;
 
 export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
   return (
@@ -15,7 +15,7 @@ export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
         <span>{cells.length}개 그룹</span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2">
         {cells.map((cell) => {
           const href = cell.id ? `/members?cell=${cell.id}` : '/members?cell=unassigned';
           const leaders = cell.leaderNames.length > 0 ? cell.leaderNames.join(', ') : '미지정';
@@ -27,11 +27,11 @@ export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
               key={cell.id ?? 'unassigned'}
               href={href}
               prefetch={false}
-              className="block rounded-lg border bg-card p-3 text-card-foreground shadow-sm transition-colors hover:bg-accent/50"
+              className="block rounded-lg border bg-card p-2 text-card-foreground shadow-sm transition-colors hover:bg-accent/50 sm:p-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-base font-semibold leading-tight">{cell.name}</p>
+                  <p className="text-sm font-semibold leading-tight sm:text-base">{cell.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">총 {cell.memberCount}명</p>
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground">보기 →</span>
