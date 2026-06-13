@@ -1,5 +1,5 @@
-import { MemberDetailLoading } from '@/components/dashboard-page-loading';
+import { DadreamLoading } from '@/components/dadream-loading';
 
 export default function MemberLoading() {
-  return <MemberDetailLoading />;
+  return <DadreamLoading />;
 }

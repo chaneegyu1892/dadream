@@ -1,5 +1,5 @@
-import { ServicePageLoading } from '@/components/dashboard-page-loading';
+import { DadreamLoading } from '@/components/dadream-loading';
 
 export default function ServiceLoading() {
-  return <ServicePageLoading />;
+  return <DadreamLoading />;
 }
