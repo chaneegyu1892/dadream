@@ -1,5 +1,5 @@
-import { VisitsPageLoading } from '@/components/dashboard-page-loading';
+import { DadreamLoading } from '@/components/dadream-loading';
 
 export default function VisitsLoading() {
-  return <VisitsPageLoading />;
+  return <DadreamLoading />;
 }
