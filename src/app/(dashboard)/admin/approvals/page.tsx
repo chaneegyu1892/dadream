@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { ApprovalCard } from '@/components/approval-card';
 import type { CellRow, MemberRow, ProfileRow } from '@/types/db';
 
+type ApprovalMemberRow = Pick<MemberRow, 'id' | 'name' | 'cell_id'>;
+
 export default async function ApprovalsPage() {
   const session = await getSessionProfile();
   if (!session || !roleAtLeast(session.role, 'officer')) redirect('/');
@@ -17,13 +19,13 @@ export default async function ApprovalsPage() {
       .select('id, kakao_nickname, approval, created_at, member_id, role')
       .eq('approval', 'pending')
       .order('created_at'),
-    supabase.from('members').select('id, name, photo_path, cell_id, duty, is_officer, active').eq('active', true).order('name'),
+    supabase.from('members').select('id, name, cell_id').eq('active', true).order('name'),
     supabase.from('profiles').select('member_id').not('member_id', 'is', null),
     supabase.from('cells').select('id, name, sort_order').order('sort_order'),
   ]);
 
   const pending = (pendingRes.data ?? []) as ProfileRow[];
-  const members = (membersRes.data ?? []) as MemberRow[];
+  const members = (membersRes.data ?? []) as ApprovalMemberRow[];
   const cells = (cellsRes.data ?? []) as CellRow[];
   const linkedIds = new Set((profilesRes.data ?? []).map((p) => p.member_id));
   const unlinked = members.filter((m) => !linkedIds.has(m.id));
