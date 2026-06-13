@@ -47,6 +47,7 @@ export interface EventRow {
   ends_at: string | null;
   location: string | null;
   description: string | null;
+  color: string;
 }
 
 export interface VisitRow {
