@@ -81,6 +81,9 @@ export default async function HomePage() {
         <Button asChild variant="outline" className="flex-1">
           <Link href="/members">명부 보기</Link>
         </Button>
+        <Button asChild variant="outline" className="flex-1">
+          <Link href="/me">내 정보 수정</Link>
+        </Button>
       </div>
 
       <Card>

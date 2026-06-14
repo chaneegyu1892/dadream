@@ -5,17 +5,26 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { roleAtLeast, type UserRole } from '@/lib/roles';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: string;
+  minRole?: UserRole;
+  desktopOnly?: boolean;
+}[] = [
   { href: '/', label: '홈', icon: '🏠' },
   { href: '/visits', label: '캘린더', icon: '📅' },
   { href: '/members', label: '명부', icon: '👥' },
   { href: '/service', label: '예배위원', icon: '🙏' },
+  { href: '/me', label: '내 정보', icon: '🙋', desktopOnly: true },
   { href: '/admin', label: '관리', icon: '⚙️', minRole: 'officer' as UserRole },
 ];
 
 export function Nav({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => !item.minRole || roleAtLeast(role, item.minRole));
+  // 모바일 하단 탭바는 핵심 항목만 유지 (6번째 탭으로 붐비지 않도록)
+  const mobileItems = items.filter((item) => !item.desktopOnly);
 
   function isActive(href: string) {
     return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -25,7 +34,7 @@ export function Nav({ role }: { role: UserRole }) {
     <>
       {/* 모바일: 하단 탭바 */}
       <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden">
-        {items.map((item) => (
+        {mobileItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
