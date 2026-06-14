@@ -31,6 +31,13 @@ describe('updateSession', () => {
     expect(createServerClientMock).not.toHaveBeenCalled();
   });
 
+  it('PWA manifest는 로그인 전에도 공개되어야 한다', async () => {
+    const response = await updateSession(request('/manifest.webmanifest'));
+
+    expect(response.status).toBe(200);
+    expect(createServerClientMock).not.toHaveBeenCalled();
+  });
+
   it('미로그인 사용자가 보호 경로를 열면 로그인으로 보낸다', async () => {
     createServerClientMock.mockReturnValue({
       auth: {

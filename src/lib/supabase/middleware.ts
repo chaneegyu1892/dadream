@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseEnv } from '@/lib/supabase/env';
 
-const PUBLIC_PATHS = ['/login', '/auth', '/pending'];
+const PUBLIC_PATHS = ['/login', '/auth', '/pending', '/manifest.webmanifest'];
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
