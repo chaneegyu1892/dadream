@@ -44,6 +44,13 @@ export default async function AdminPage() {
       description: '명부에 새 청년을 등록해요',
       badge: 0,
     },
+    {
+      href: '/admin/member-duties',
+      icon: '🏷️',
+      title: '직분 관리',
+      description: '명부 수정 화면의 직분 선택지를 관리해요',
+      badge: 0,
+    },
   ];
 
   return (

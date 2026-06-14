@@ -3,7 +3,7 @@ import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 import { MemberEditForm } from '@/components/member-edit-form';
-import type { CellRow } from '@/types/db';
+import type { CellRow, MemberDutyRow } from '@/types/db';
 
 interface MemberEditPageProps {
   params: Promise<{ id: string }>;
@@ -24,7 +24,7 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
   if (!roleAtLeast(session.role, 'officer')) redirect(`/members/${id}`);
 
   const supabase = await createClient();
-  const [memberRes, contactRes, cellsRes] = await Promise.all([
+  const [memberRes, contactRes, cellsRes, dutiesRes] = await Promise.all([
     supabase
       .from('members')
       .select('id, name, cell_id, duty, is_officer, active, gender, registered_at')
@@ -36,6 +36,7 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
       .eq('member_id', id)
       .maybeSingle(),
     supabase.from('cells').select('id, name, sort_order').order('sort_order'),
+    supabase.from('member_duties').select('id, name, sort_order, created_at, updated_at').order('sort_order').order('name'),
   ]);
 
   const member = memberRes.data;
@@ -43,6 +44,11 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
 
   const contact = contactRes.data;
   const cells = (cellsRes.data ?? []) as CellRow[];
+  const duties = (dutiesRes.data ?? []) as MemberDutyRow[];
+  const dutyOptions = duties.map((d) => d.name);
+  if (member.duty && !dutyOptions.includes(member.duty)) {
+    dutyOptions.unshift(member.duty);
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-5">
@@ -53,6 +59,7 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
       <MemberEditForm
         memberId={member.id}
         cells={cells.map((c) => ({ id: c.id, name: c.name }))}
+        dutyOptions={dutyOptions}
         initial={{
           name: member.name,
           cellId: member.cell_id ?? '',

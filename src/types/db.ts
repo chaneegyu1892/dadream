@@ -19,6 +19,14 @@ export interface MemberRow {
   registered_at: string | null;
 }
 
+export interface MemberDutyRow {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MemberContactRow {
   member_id: string;
   phone: string | null;

@@ -72,6 +72,30 @@ describe('parseMemberEdit', () => {
     expect(data.contact.baptized).toBeNull();
   });
 
+  it('직분은 드롭다운 목록 값만 허용한다', () => {
+    for (const duty of ['셀리더', '회장', '부회장', '총무', '부총무', '서기', '회계', '팀장']) {
+      expect(ok({ name: '김진규', duty }).member.duty).toBe(duty);
+    }
+
+    const result = parseMemberEdit({ name: '김진규', duty: '쎌리더' });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain('직분');
+  });
+
+  it('없음/none 직분 선택은 null로 변환한다', () => {
+    expect(ok({ name: '김진규', duty: '없음' }).member.duty).toBeNull();
+    expect(ok({ name: '김진규', duty: 'none' }).member.duty).toBeNull();
+  });
+
+  it('DB에서 내려온 사용자 정의 직분 목록으로 검증할 수 있다', () => {
+    const custom = parseMemberEdit({ name: '김진규', duty: '찬양팀장' }, ['찬양팀장']);
+    expect(custom.success).toBe(true);
+    if (custom.success) expect(custom.data.member.duty).toBe('찬양팀장');
+
+    const oldDefault = parseMemberEdit({ name: '김진규', duty: '셀리더' }, ['찬양팀장']);
+    expect(oldDefault.success).toBe(false);
+  });
+
   it('이름이 비면 실패한다', () => {
     const result = parseMemberEdit({ name: '   ' });
     expect(result.success).toBe(false);

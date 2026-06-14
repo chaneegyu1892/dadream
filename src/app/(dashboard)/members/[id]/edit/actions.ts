@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
-import { parseMemberEdit } from '@/lib/member-edit';
+import { DEFAULT_MEMBER_DUTY_OPTIONS, parseMemberEdit } from '@/lib/member-edit';
 import { createClient } from '@/lib/supabase/server';
 
 const memberIdSchema = z.string().uuid();
@@ -28,13 +28,39 @@ export async function updateMember(
     return { error: '잘못된 요청이에요.' };
   }
 
-  const parsed = parseMemberEdit(formData);
+  const now = new Date().toISOString();
+  const supabase = await createClient();
+
+  const { data: dutyRows, error: dutyError } = await supabase
+    .from('member_duties')
+    .select('name')
+    .order('sort_order')
+    .order('name');
+  if (dutyError) {
+    console.error('[updateMember] member_duties 조회 실패:', dutyError.message);
+    return { error: '직분 목록을 확인하지 못했어요. 다시 시도해주세요.' };
+  }
+
+  const { data: currentMember, error: currentMemberError } = await supabase
+    .from('members')
+    .select('duty')
+    .eq('id', memberId)
+    .single();
+  if (currentMemberError || !currentMember) {
+    console.error('[updateMember] 기존 명부 조회 실패:', currentMemberError?.message);
+    return { error: '수정할 청년을 찾지 못했어요.' };
+  }
+
+  const allowedDutySet = new Set(dutyRows?.map((d) => d.name).filter(Boolean) ?? []);
+  if (currentMember.duty) allowedDutySet.add(currentMember.duty);
+  const allowedDuties = Array.from(allowedDutySet);
+  const parsed = parseMemberEdit(
+    formData,
+    allowedDuties.length > 0 ? allowedDuties : DEFAULT_MEMBER_DUTY_OPTIONS,
+  );
   if (!parsed.success) {
     return { error: parsed.error };
   }
-
-  const now = new Date().toISOString();
-  const supabase = await createClient();
 
   const { error: memberError } = await supabase
     .from('members')

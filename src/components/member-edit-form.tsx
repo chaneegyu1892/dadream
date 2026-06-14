@@ -32,6 +32,8 @@ export interface MemberEditInitial {
 interface MemberEditFormProps {
   memberId: string;
   cells: { id: string; name: string }[];
+  /** member_duties에서 불러온 직분 목록(`없음` 의사옵션은 폼이 직접 덧붙임). */
+  dutyOptions: string[];
   initial: MemberEditInitial;
 }
 
@@ -41,9 +43,10 @@ const GENDER_OPTIONS = [
   { value: '여자', label: '여자' },
 ];
 
-export function MemberEditForm({ memberId, cells, initial }: MemberEditFormProps) {
+export function MemberEditForm({ memberId, cells, dutyOptions, initial }: MemberEditFormProps) {
   const router = useRouter();
   const [cellId, setCellId] = useState<string>(initial.cellId || 'none');
+  const [duty, setDuty] = useState<string>(initial.duty || 'none');
   const [gender, setGender] = useState<string>(initial.gender || 'none');
   const [baptized, setBaptized] = useState<Baptized>(initial.baptized);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +56,7 @@ export function MemberEditForm({ memberId, cells, initial }: MemberEditFormProps
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set('cellId', cellId === 'none' ? '' : cellId);
+    formData.set('duty', duty === 'none' ? '' : duty);
     formData.set('gender', gender === 'none' ? '' : gender);
     formData.set('baptized', baptized);
     setError(null);
@@ -92,8 +96,20 @@ export function MemberEditForm({ memberId, cells, initial }: MemberEditFormProps
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="duty">직분</Label>
-          <Input id="duty" name="duty" maxLength={30} defaultValue={initial.duty} placeholder="예: 셀리더" />
+          <Label>직분</Label>
+          <Select value={duty} onValueChange={setDuty}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">없음</SelectItem>
+              {dutyOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label>성별</Label>

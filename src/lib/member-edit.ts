@@ -25,6 +25,24 @@ export type ParseMemberEditResult =
   | { success: true; data: MemberEditPayload }
   | { success: false; error: string };
 
+/**
+ * member_duties 테이블이 비었거나 조회에 실패했을 때 쓰는 기본 직분 목록.
+ * `없음`은 UI에서 고정 의사옵션으로만 다루므로 여기에 포함하지 않는다.
+ */
+export const DEFAULT_MEMBER_DUTY_OPTIONS = [
+  '셀리더',
+  '회장',
+  '부회장',
+  '총무',
+  '부총무',
+  '서기',
+  '회계',
+  '팀장',
+] as const;
+
+/** `없음`/빈값 계열은 직분 미지정(null)으로 본다. */
+const DUTY_NONE_TOKENS = new Set(['', 'none', '없음']);
+
 /** 빈 문자열·공백만 있는 값은 null로, 나머지 문자열은 trim한다. */
 const trimmedOrNull = (value: unknown): unknown => {
   if (typeof value !== 'string') return value ?? null;
@@ -65,36 +83,53 @@ const dateSchema = (label: string) =>
 const trimmedName = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
-const memberEditSchema = z.object({
-  name: z.preprocess(
-    trimmedName,
+/** 직분 입력 정규화: `없음`/none/빈값 -> null, 그 외 문자열은 trim. */
+const dutyOrNull = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return DUTY_NONE_TOKENS.has(trimmed) ? null : trimmed;
+};
+
+const dutySchema = (allowedDuties: readonly string[]) =>
+  z.preprocess(
+    dutyOrNull,
     z
       .string()
-      .min(1, '이름을 입력해주세요.')
-      .max(30, '이름은 30자 이하로 입력해주세요.'),
-  ),
-  cellId: z.preprocess(
-    trimmedOrNull,
-    z.string().uuid('셀 정보가 올바르지 않아요.').nullable(),
-  ),
-  duty: z.preprocess(
-    trimmedOrNull,
-    z.string().max(30, '직분은 30자 이하로 입력해주세요.').nullable(),
-  ),
-  isOfficer: z.preprocess(boolFromInput, z.boolean()),
-  active: z.preprocess(boolFromInput, z.boolean()),
-  gender: z.preprocess(
-    trimmedOrNull,
-    z.string().max(10, '성별은 10자 이하로 입력해주세요.').nullable(),
-  ),
-  registeredAt: z.preprocess(trimmedOrNull, dateSchema('등록일')),
-  phone: z.preprocess(
-    trimmedOrNull,
-    z.string().max(20, '전화번호는 20자 이하로 입력해주세요.').nullable(),
-  ),
-  birthDate: z.preprocess(trimmedOrNull, dateSchema('생년월일')),
-  baptized: z.preprocess(baptizedFromSelect, z.boolean().nullable()),
-});
+      .refine(
+        (v) => allowedDuties.includes(v),
+        '직분은 목록에서 선택해주세요.',
+      )
+      .nullable(),
+  );
+
+const buildMemberEditSchema = (allowedDuties: readonly string[]) =>
+  z.object({
+    name: z.preprocess(
+      trimmedName,
+      z
+        .string()
+        .min(1, '이름을 입력해주세요.')
+        .max(30, '이름은 30자 이하로 입력해주세요.'),
+    ),
+    cellId: z.preprocess(
+      trimmedOrNull,
+      z.string().uuid('셀 정보가 올바르지 않아요.').nullable(),
+    ),
+    duty: dutySchema(allowedDuties),
+    isOfficer: z.preprocess(boolFromInput, z.boolean()),
+    active: z.preprocess(boolFromInput, z.boolean()),
+    gender: z.preprocess(
+      trimmedOrNull,
+      z.string().max(10, '성별은 10자 이하로 입력해주세요.').nullable(),
+    ),
+    registeredAt: z.preprocess(trimmedOrNull, dateSchema('등록일')),
+    phone: z.preprocess(
+      trimmedOrNull,
+      z.string().max(20, '전화번호는 20자 이하로 입력해주세요.').nullable(),
+    ),
+    birthDate: z.preprocess(trimmedOrNull, dateSchema('생년월일')),
+    baptized: z.preprocess(baptizedFromSelect, z.boolean().nullable()),
+  });
 
 /** FormData나 일반 객체에서 값을 꺼낸다 (File 등 문자열이 아닌 값은 무시). */
 function readField(input: FormData | Record<string, unknown>, key: string): unknown {
@@ -111,8 +146,9 @@ function readField(input: FormData | Record<string, unknown>, key: string): unkn
  */
 export function parseMemberEdit(
   input: FormData | Record<string, unknown>,
+  allowedDuties: readonly string[] = DEFAULT_MEMBER_DUTY_OPTIONS,
 ): ParseMemberEditResult {
-  const parsed = memberEditSchema.safeParse({
+  const parsed = buildMemberEditSchema(allowedDuties).safeParse({
     name: readField(input, 'name'),
     cellId: readField(input, 'cellId'),
     duty: readField(input, 'duty'),
