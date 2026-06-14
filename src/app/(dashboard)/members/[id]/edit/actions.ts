@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateMemberCaches } from '@/lib/dashboard-cache-invalidation';
 import { roleAtLeast } from '@/lib/roles';
 import {
   DEFAULT_OFFICER_POSITION_OPTIONS,
@@ -96,6 +97,7 @@ export async function updateMember(
     return { error: '연락처 정보를 저장하지 못했어요. 다시 시도해주세요.' };
   }
 
+  revalidateMemberCaches();
   revalidatePath('/members');
   revalidatePath(`/members/${memberId}`);
   revalidatePath(`/members/${memberId}/edit`);

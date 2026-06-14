@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
+import {
+  getCachedCalendarDisplay,
+  getDashboardAccessToken,
+  type CalendarDisplayData,
+} from '@/lib/dashboard-data-cache';
 import { getCurrentMonthWindow } from '@/lib/dashboard-query';
 import { normalizeEventColor } from '@/lib/events';
 import { getKoreanHolidaysInRange } from '@/lib/korean-holidays';
@@ -16,34 +21,58 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { EventRow, VisitRow } from '@/types/db';
 
 type VisitWithName = VisitRow & { members: { name: string } | null };
-type CalendarVisitRow = Pick<VisitRow, 'id' | 'confirmed_at'> & { members: { name: string } | null };
 
 const ACTIVE_VISIT_STATUSES = ['requested', 'proposed', 'confirmed'] as const;
 const PAST_VISIT_STATUSES = ['completed', 'declined', 'cancelled'] as const;
 const PAST_VISIT_LIMIT = 20;
 
-export default async function VisitsPage() {
-  const session = await getSessionProfile();
-  if (!session) redirect('/login');
-
-  const supabase = await createClient();
-  const { from: calendarFrom, to: calendarTo } = getCurrentMonthWindow();
-  const [eventsRes, calendarVisitsRes, activeVisitsRes, pastVisitsRes] = await Promise.all([
+/** access token이 없을 때(예외적) 쓰는 라이브 캘린더 조회 — 캐시 헬퍼와 동일한 쿼리. */
+async function fetchCalendarDisplayLive(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  from: string,
+  to: string,
+): Promise<CalendarDisplayData> {
+  const [eventsRes, visitsRes] = await Promise.all([
     supabase
       .from('events')
       .select('id, title, starts_at, ends_at, location, description, color')
-      .gte('starts_at', calendarFrom)
-      .lte('starts_at', calendarTo)
+      .gte('starts_at', from)
+      .lte('starts_at', to)
       .order('starts_at')
       .limit(100),
     supabase
       .from('visit_requests')
       .select('id, confirmed_at, members(name)')
       .not('confirmed_at', 'is', null)
-      .gte('confirmed_at', calendarFrom)
-      .lte('confirmed_at', calendarTo)
+      .gte('confirmed_at', from)
+      .lte('confirmed_at', to)
       .order('confirmed_at')
       .limit(100),
+  ]);
+
+  return {
+    events: (eventsRes.data ?? []) as EventRow[],
+    visits: (visitsRes.data ?? []) as unknown as CalendarDisplayData['visits'],
+  };
+}
+
+export default async function VisitsPage() {
+  const session = await getSessionProfile();
+  if (!session) redirect('/login');
+
+  const supabase = await createClient();
+  const calendarWindow = getCurrentMonthWindow();
+  const { from: calendarFrom, to: calendarTo } = calendarWindow;
+  const accessToken = await getDashboardAccessToken();
+
+  // 캘린더 표시용(일정 + 확정 심방)은 짧게 캐시하고, 진행/지난 심방은 항상 라이브로 조회한다.
+  const [calendarDisplay, activeVisitsRes, pastVisitsRes] = await Promise.all([
+    accessToken
+      ? getCachedCalendarDisplay(session.userId, accessToken, calendarWindow).catch((error) => {
+          console.error('[VisitsPage] cached calendar 조회 실패, live 조회로 폴백:', error);
+          return fetchCalendarDisplayLive(supabase, calendarFrom, calendarTo);
+        })
+      : fetchCalendarDisplayLive(supabase, calendarFrom, calendarTo),
     supabase
       .from('visit_requests')
       .select(
@@ -62,8 +91,8 @@ export default async function VisitsPage() {
       .limit(PAST_VISIT_LIMIT),
   ]);
 
-  const events = (eventsRes.data ?? []) as EventRow[];
-  const calendarVisits = (calendarVisitsRes.data ?? []) as unknown as CalendarVisitRow[];
+  const events = calendarDisplay.events;
+  const calendarVisits = calendarDisplay.visits;
   const actionable = (activeVisitsRes.data ?? []) as unknown as VisitWithName[];
   const past = (pastVisitsRes.data ?? []) as unknown as VisitWithName[];
   const holidays = getKoreanHolidaysInRange(calendarFrom, calendarTo);

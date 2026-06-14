@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateMemberCaches } from '@/lib/dashboard-cache-invalidation';
 import { FIXED_CELL_ROLE } from '@/lib/member-edit';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
@@ -43,6 +44,7 @@ function parseDutyForm(formData: FormData):
 }
 
 function revalidateDutyPages() {
+  revalidateMemberCaches();
   revalidatePath('/admin');
   revalidatePath('/admin/member-duties');
   revalidatePath('/members');

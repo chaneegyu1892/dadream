@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateMemberCaches } from '@/lib/dashboard-cache-invalidation';
 import {
   DEFAULT_OFFICER_POSITION_OPTIONS,
   FIXED_CELL_ROLE,
@@ -131,6 +132,7 @@ export async function createMember(formData: FormData): Promise<{ error?: string
     }
   }
 
+  revalidateMemberCaches();
   revalidatePath('/members');
   return {};
 }

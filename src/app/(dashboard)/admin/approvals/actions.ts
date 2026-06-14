@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateMemberCaches } from '@/lib/dashboard-cache-invalidation';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 
@@ -58,6 +59,10 @@ export async function approveProfile(input: ApproveInput): Promise<{ error?: str
     console.error('[approveProfile] push_notification 실패:', notifyError.message);
   }
 
+  if (parsed.data.newMemberName) {
+    revalidateMemberCaches();
+    revalidatePath('/members');
+  }
   revalidatePath('/admin/approvals');
   return {};
 }

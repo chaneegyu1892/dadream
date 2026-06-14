@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateCalendarCaches } from '@/lib/dashboard-cache-invalidation';
 import { parseCalendarEventInput, type CalendarEventInput } from '@/lib/events';
 import { roleAtLeast } from '@/lib/roles';
 import { canTransition, formatSlot, slotToIso, type PreferredSlot, type VisitStatus } from '@/lib/visits';
@@ -55,6 +56,7 @@ export async function createCalendarEvent(input: CalendarEventInput): Promise<{ 
     return { error: '일정 추가에 실패했어요. 잠시 후 다시 시도해주세요.' };
   }
 
+  revalidateCalendarCaches();
   revalidatePath('/visits');
   revalidatePath('/');
   return {};
@@ -99,6 +101,7 @@ export async function createVisitRequest(input: CreateVisitInput): Promise<{ err
     console.error('[createVisitRequest] notify_pastors 실패:', notifyError.message);
   }
 
+  revalidateCalendarCaches();
   revalidatePath('/visits');
   return {};
 }
@@ -229,6 +232,7 @@ export async function decideVisit(input: DecideVisitInput): Promise<{ error?: st
     }
   }
 
+  revalidateCalendarCaches();
   revalidatePath('/visits');
   return {};
 }
