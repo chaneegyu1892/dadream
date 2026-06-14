@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
-import { DashboardSyncButton } from '@/components/dashboard-sync-button';
 import { Badge } from '@/components/ui/badge';
 
 export default async function AdminPage() {
@@ -60,8 +59,6 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-bold">관리</h1>
         <p className="mt-1 text-sm text-muted-foreground">임원 이상만 볼 수 있는 메뉴예요.</p>
       </header>
-
-      <DashboardSyncButton />
 
       <div className="space-y-2">
         {menus.map((menu) => (
