@@ -6,6 +6,7 @@ import { getSignedPhotoUrls } from '@/lib/photos';
 import { createClient } from '@/lib/supabase/server';
 import { CellOverviewGrid } from '@/components/cell-overview-grid';
 import { MemberGrid } from '@/components/member-grid';
+import { MemberSearchForm } from '@/components/member-search-form';
 import { Button } from '@/components/ui/button';
 import type { CellRow, MemberRow } from '@/types/db';
 
@@ -42,6 +43,12 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
     return (
       <div className="mx-auto max-w-6xl space-y-5">
         <MembersHeader totalCount={totalCount} canManage={canManage} />
+        <MemberSearchForm
+          cells={cells.map((c) => ({ id: c.id, name: c.name }))}
+          query=""
+          cellId="all"
+          hint="이름으로 검색하거나 셀을 선택하면 서버에서 바로 찾아 사진을 불러와요."
+        />
         <CellOverviewGrid cells={summaries} />
       </div>
     );
