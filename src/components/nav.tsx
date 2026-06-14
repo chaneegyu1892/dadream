@@ -11,10 +11,14 @@ const NAV_ITEMS: {
   icon: string;
   minRole?: UserRole;
   desktopOnly?: boolean;
+  // longPrefetch: 무겁고 자주 안 바뀌는 상위 화면을 `prefetch={true}`로 완전히 prefetch해서
+  //   next.config.ts의 staleTimes.static(12h) 동안 클라이언트 라우터 캐시에 보존시킨다.
+  //   → 화면 간 이동이 즉시 뜬다. (자주 바뀌거나 권한 민감한 /me·/admin 등에는 켜지 않는다.)
+  longPrefetch?: boolean;
 }[] = [
   { href: '/', label: '홈', icon: '🏠' },
-  { href: '/visits', label: '캘린더', icon: '📅' },
-  { href: '/members', label: '명부', icon: '👥' },
+  { href: '/visits', label: '캘린더', icon: '📅', longPrefetch: true },
+  { href: '/members', label: '명부', icon: '👥', longPrefetch: true },
   { href: '/service', label: '예배위원', icon: '🙏' },
   { href: '/me', label: '내 정보', icon: '🙋', desktopOnly: true },
   { href: '/admin', label: '관리', icon: '⚙️', minRole: 'officer' as UserRole },
@@ -38,6 +42,7 @@ export function Nav({ role }: { role: UserRole }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={item.longPrefetch || undefined}
             className={cn(
               'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs',
               isActive(item.href) ? 'font-semibold text-foreground' : 'text-muted-foreground',
@@ -59,6 +64,7 @@ export function Nav({ role }: { role: UserRole }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={item.longPrefetch || undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                   isActive(item.href)
