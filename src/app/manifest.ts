@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     lang: 'ko',
-    // 스플래시 화면은 로고와 같은 다크, 앱 UI 크롬은 화이트
-    background_color: '#1c1a1b',
+    // 콜드 스타트 시 OS 스플래시가 검게 보이지 않도록 앱 배경과 동일한 화이트로 맞춘다
+    background_color: '#ffffff',
     theme_color: '#ffffff',
     icons: [
       { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
