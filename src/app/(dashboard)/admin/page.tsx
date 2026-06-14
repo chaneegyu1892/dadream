@@ -47,8 +47,8 @@ export default async function AdminPage() {
     {
       href: '/admin/member-duties',
       icon: '🏷️',
-      title: '직분 관리',
-      description: '명부 수정 화면의 직분 선택지를 관리해요',
+      title: '직책 관리',
+      description: '명부 수정 화면의 직책 선택지를 관리해요',
       badge: 0,
     },
   ];

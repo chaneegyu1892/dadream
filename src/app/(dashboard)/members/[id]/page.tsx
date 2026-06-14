@@ -22,7 +22,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
   const supabase = await createClient();
   const { data: memberData } = await supabase
     .from('members')
-    .select('id, name, photo_path, cell_id, duty, is_officer, active, cells(name)')
+    .select('id, name, photo_path, cell_id, cell_role, officer_position, duty, is_officer, active, cells(name)')
     .eq('id', id)
     .single();
 
@@ -68,9 +68,16 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
         </Avatar>
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold">{member.name}</h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>{member.cells?.name ?? '무소속'}</span>
-            {member.duty && <span>· {member.duty}</span>}
+            {(member.cell_role ?? (member.duty === '셀리더' ? '셀리더' : null)) && (
+              <Badge variant="outline">셀리더</Badge>
+            )}
+            {(member.officer_position ?? (member.duty && member.duty !== '셀리더' ? member.duty : null)) && (
+              <Badge variant="outline">
+                {member.officer_position ?? (member.duty !== '셀리더' ? member.duty : null)}
+              </Badge>
+            )}
             {member.is_officer && <Badge variant="secondary">임원</Badge>}
           </div>
         </div>

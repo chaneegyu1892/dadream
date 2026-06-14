@@ -3,11 +3,20 @@ import { z } from 'zod';
 /**
  * 임원+가 명부에서 수정할 수 있는 필드 페이로드.
  * members 테이블 필드와 member_contact 필드를 분리한다.
+ *
+ * 역할은 두 갈래로 나뉜다.
+ *   - cell_role        : 셀 역할(없음/셀리더). DB로 관리하지 않는 고정 값.
+ *   - officer_position : 직책(회장/부회장/...). member_duties로 관리.
+ * 한 사람이 셀리더이면서 직책을 동시에 가질 수 있다.
+ * duty는 레거시/호환을 위한 파생 요약값으로만 채운다.
  */
 export interface MemberEditPayload {
   member: {
     name: string;
     cell_id: string | null;
+    cell_role: string | null;
+    officer_position: string | null;
+    /** cell_role/officer_position에서 파생한 레거시 요약값. */
     duty: string | null;
     is_officer: boolean;
     active: boolean;
@@ -25,12 +34,15 @@ export type ParseMemberEditResult =
   | { success: true; data: MemberEditPayload }
   | { success: false; error: string };
 
+/** 셀 역할의 유일한 실제 값(없음은 null로 다룬다). */
+export const FIXED_CELL_ROLE = '셀리더';
+
 /**
- * member_duties 테이블이 비었거나 조회에 실패했을 때 쓰는 기본 직분 목록.
+ * member_duties 테이블이 비었거나 조회에 실패했을 때 쓰는 기본 직책 목록.
+ * 직책 드롭다운은 셀리더를 포함하지 않는다(셀 역할에서 별도로 다룸).
  * `없음`은 UI에서 고정 의사옵션으로만 다루므로 여기에 포함하지 않는다.
  */
-export const DEFAULT_MEMBER_DUTY_OPTIONS = [
-  '셀리더',
+export const DEFAULT_OFFICER_POSITION_OPTIONS = [
   '회장',
   '부회장',
   '총무',
@@ -40,8 +52,8 @@ export const DEFAULT_MEMBER_DUTY_OPTIONS = [
   '팀장',
 ] as const;
 
-/** `없음`/빈값 계열은 직분 미지정(null)으로 본다. */
-const DUTY_NONE_TOKENS = new Set(['', 'none', '없음']);
+/** `없음`/빈값 계열은 미지정(null)으로 본다. */
+const NONE_TOKENS = new Set(['', 'none', '없음']);
 
 /** 빈 문자열·공백만 있는 값은 null로, 나머지 문자열은 trim한다. */
 const trimmedOrNull = (value: unknown): unknown => {
@@ -83,26 +95,36 @@ const dateSchema = (label: string) =>
 const trimmedName = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
 
-/** 직분 입력 정규화: `없음`/none/빈값 -> null, 그 외 문자열은 trim. */
-const dutyOrNull = (value: unknown): string | null => {
+/** 역할 입력 정규화: `없음`/none/빈값 -> null, 그 외 문자열은 trim. */
+const roleOrNull = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
-  return DUTY_NONE_TOKENS.has(trimmed) ? null : trimmed;
+  return NONE_TOKENS.has(trimmed) ? null : trimmed;
 };
 
-const dutySchema = (allowedDuties: readonly string[]) =>
+/** 셀 역할: null 또는 고정값 셀리더만 허용한다. */
+const cellRoleSchema = z.preprocess(
+  roleOrNull,
+  z
+    .string()
+    .refine((v) => v === FIXED_CELL_ROLE, '셀 역할은 없음 또는 셀리더만 선택할 수 있어요.')
+    .nullable(),
+);
+
+/** 직책: member_duties 목록(없음 제외)에서만 선택할 수 있다. */
+const officerPositionSchema = (allowedPositions: readonly string[]) =>
   z.preprocess(
-    dutyOrNull,
+    roleOrNull,
     z
       .string()
       .refine(
-        (v) => allowedDuties.includes(v),
-        '직분은 목록에서 선택해주세요.',
+        (v) => allowedPositions.includes(v),
+        '직책은 목록에서 선택해주세요.',
       )
       .nullable(),
   );
 
-const buildMemberEditSchema = (allowedDuties: readonly string[]) =>
+const buildMemberEditSchema = (allowedPositions: readonly string[]) =>
   z.object({
     name: z.preprocess(
       trimmedName,
@@ -115,7 +137,8 @@ const buildMemberEditSchema = (allowedDuties: readonly string[]) =>
       trimmedOrNull,
       z.string().uuid('셀 정보가 올바르지 않아요.').nullable(),
     ),
-    duty: dutySchema(allowedDuties),
+    cellRole: cellRoleSchema,
+    officerPosition: officerPositionSchema(allowedPositions),
     isOfficer: z.preprocess(boolFromInput, z.boolean()),
     active: z.preprocess(boolFromInput, z.boolean()),
     gender: z.preprocess(
@@ -141,17 +164,32 @@ function readField(input: FormData | Record<string, unknown>, key: string): unkn
 }
 
 /**
+ * 셀 역할/직책에서 레거시 duty 요약값을 만든다.
+ * 직책이 있으면 그 값을, 없고 셀리더면 셀리더를, 둘 다 없으면 null.
+ * 남아있는 옛 코드(duty만 읽는 화면)의 표시 호환을 위해 채운다.
+ */
+function deriveLegacyDuty(
+  cellRole: string | null,
+  officerPosition: string | null,
+): string | null {
+  if (officerPosition) return officerPosition;
+  if (cellRole === FIXED_CELL_ROLE) return FIXED_CELL_ROLE;
+  return null;
+}
+
+/**
  * 명부 수정 폼 입력을 검증해 members / member_contact 페이로드로 분리한다.
  * 빈 문자열은 null로 변환되고, 한국어 검증 메시지를 돌려준다.
  */
 export function parseMemberEdit(
   input: FormData | Record<string, unknown>,
-  allowedDuties: readonly string[] = DEFAULT_MEMBER_DUTY_OPTIONS,
+  allowedPositions: readonly string[] = DEFAULT_OFFICER_POSITION_OPTIONS,
 ): ParseMemberEditResult {
-  const parsed = buildMemberEditSchema(allowedDuties).safeParse({
+  const parsed = buildMemberEditSchema(allowedPositions).safeParse({
     name: readField(input, 'name'),
     cellId: readField(input, 'cellId'),
-    duty: readField(input, 'duty'),
+    cellRole: readField(input, 'cellRole'),
+    officerPosition: readField(input, 'officerPosition'),
     isOfficer: readField(input, 'isOfficer'),
     active: readField(input, 'active'),
     gender: readField(input, 'gender'),
@@ -175,7 +213,9 @@ export function parseMemberEdit(
       member: {
         name: v.name,
         cell_id: v.cellId,
-        duty: v.duty,
+        cell_role: v.cellRole,
+        officer_position: v.officerPosition,
+        duty: deriveLegacyDuty(v.cellRole, v.officerPosition),
         is_officer: v.isOfficer,
         active: v.active,
         gender: v.gender,

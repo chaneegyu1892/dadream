@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 import { MemberEditForm } from '@/components/member-edit-form';
+import { FIXED_CELL_ROLE } from '@/lib/member-edit';
 import type { CellRow, MemberDutyRow } from '@/types/db';
 
 interface MemberEditPageProps {
@@ -27,7 +28,7 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
   const [memberRes, contactRes, cellsRes, dutiesRes] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, cell_id, duty, is_officer, active, gender, registered_at')
+      .select('id, name, cell_id, cell_role, officer_position, duty, is_officer, active, gender, registered_at')
       .eq('id', id)
       .single(),
     supabase
@@ -36,7 +37,12 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
       .eq('member_id', id)
       .maybeSingle(),
     supabase.from('cells').select('id, name, sort_order').order('sort_order'),
-    supabase.from('member_duties').select('id, name, sort_order, created_at, updated_at').order('sort_order').order('name'),
+    supabase
+      .from('member_duties')
+      .select('id, name, sort_order, created_at, updated_at')
+      .neq('name', FIXED_CELL_ROLE)
+      .order('sort_order')
+      .order('name'),
   ]);
 
   const member = memberRes.data;
@@ -45,9 +51,20 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
   const contact = contactRes.data;
   const cells = (cellsRes.data ?? []) as CellRow[];
   const duties = (dutiesRes.data ?? []) as MemberDutyRow[];
-  const dutyOptions = duties.map((d) => d.name);
-  if (member.duty && !dutyOptions.includes(member.duty)) {
-    dutyOptions.unshift(member.duty);
+
+  const legacyDuty = member.duty?.trim() ?? '';
+  // 새 컬럼을 우선 쓰되, 아직 백필되지 않은 레거시 duty가 있으면 폴백한다.
+  const initialCellRole =
+    member.cell_role ?? (legacyDuty === FIXED_CELL_ROLE ? FIXED_CELL_ROLE : '');
+  const initialOfficerPosition =
+    member.officer_position ??
+    (legacyDuty && legacyDuty !== FIXED_CELL_ROLE ? legacyDuty : '');
+
+  // 직책 드롭다운 옵션(없음 의사옵션은 폼이 직접 덧붙임).
+  const officerPositionOptions = duties.map((d) => d.name);
+  // 현재 값이 목록에 없으면(이미 삭제된 옛 직책 등) 보존을 위해 앞에 끼워 넣는다.
+  if (initialOfficerPosition && !officerPositionOptions.includes(initialOfficerPosition)) {
+    officerPositionOptions.unshift(initialOfficerPosition);
   }
 
   return (
@@ -59,11 +76,12 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
       <MemberEditForm
         memberId={member.id}
         cells={cells.map((c) => ({ id: c.id, name: c.name }))}
-        dutyOptions={dutyOptions}
+        officerPositionOptions={officerPositionOptions}
         initial={{
           name: member.name,
           cellId: member.cell_id ?? '',
-          duty: member.duty ?? '',
+          cellRole: initialCellRole,
+          officerPosition: initialOfficerPosition,
           gender: member.gender ?? '',
           registeredAt: member.registered_at ?? '',
           phone: contact?.phone ?? '',

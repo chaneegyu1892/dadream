@@ -29,6 +29,7 @@ export interface CellMemberSummaryInput {
   id: string;
   name: string;
   cell_id: string | null;
+  cell_role?: string | null;
   duty: string | null;
 }
 
@@ -100,7 +101,7 @@ export function buildCellSummaries(
     if (!summary) continue;
 
     summary.memberCount += 1;
-    if (isCellLeaderDuty(member.duty)) {
+    if (isCellLeader(member)) {
       summary.leaderNames.push(member.name);
     } else {
       summary.memberNames.push(member.name);
@@ -115,7 +116,13 @@ function compareCells(a: CellSummaryInput, b: CellSummaryInput): number {
   return a.name.localeCompare(b.name, 'ko-KR', { numeric: true });
 }
 
-function isCellLeaderDuty(duty: string | null): boolean {
+/** 셀리더 판별: 새 cell_role을 우선 쓰고, 없으면 레거시 duty로 폴백한다. */
+function isCellLeader(member: CellMemberSummaryInput): boolean {
+  if (member.cell_role === '셀리더') return true;
+  return isCellLeaderDuty(member.duty);
+}
+
+function isCellLeaderDuty(duty: string | null | undefined): boolean {
   if (!duty) return false;
   return /셀\s*리더|셀장|목자/.test(duty);
 }

@@ -4,7 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
-import { DEFAULT_MEMBER_DUTY_OPTIONS, parseMemberEdit } from '@/lib/member-edit';
+import {
+  DEFAULT_OFFICER_POSITION_OPTIONS,
+  FIXED_CELL_ROLE,
+  parseMemberEdit,
+} from '@/lib/member-edit';
 import { createClient } from '@/lib/supabase/server';
 
 const memberIdSchema = z.string().uuid();
@@ -34,16 +38,17 @@ export async function updateMember(
   const { data: dutyRows, error: dutyError } = await supabase
     .from('member_duties')
     .select('name')
+    .neq('name', FIXED_CELL_ROLE)
     .order('sort_order')
     .order('name');
   if (dutyError) {
     console.error('[updateMember] member_duties 조회 실패:', dutyError.message);
-    return { error: '직분 목록을 확인하지 못했어요. 다시 시도해주세요.' };
+    return { error: '직책 목록을 확인하지 못했어요. 다시 시도해주세요.' };
   }
 
   const { data: currentMember, error: currentMemberError } = await supabase
     .from('members')
-    .select('duty')
+    .select('cell_role, officer_position, duty')
     .eq('id', memberId)
     .single();
   if (currentMemberError || !currentMember) {
@@ -51,12 +56,21 @@ export async function updateMember(
     return { error: '수정할 청년을 찾지 못했어요.' };
   }
 
-  const allowedDutySet = new Set(dutyRows?.map((d) => d.name).filter(Boolean) ?? []);
-  if (currentMember.duty) allowedDutySet.add(currentMember.duty);
-  const allowedDuties = Array.from(allowedDutySet);
+  // 이미 삭제된 옛 직책이라도 현재 값이면 보존할 수 있도록 허용 목록에 포함한다.
+  const allowedPositionSet = new Set(
+    dutyRows?.map((d) => d.name).filter(Boolean) ?? [],
+  );
+  if (currentMember.officer_position) {
+    allowedPositionSet.add(currentMember.officer_position);
+  }
+  const legacyDuty = currentMember.duty?.trim();
+  if (legacyDuty && legacyDuty !== FIXED_CELL_ROLE) {
+    allowedPositionSet.add(legacyDuty);
+  }
+  const allowedPositions = Array.from(allowedPositionSet);
   const parsed = parseMemberEdit(
     formData,
-    allowedDuties.length > 0 ? allowedDuties : DEFAULT_MEMBER_DUTY_OPTIONS,
+    allowedPositions.length > 0 ? allowedPositions : DEFAULT_OFFICER_POSITION_OPTIONS,
   );
   if (!parsed.success) {
     return { error: parsed.error };

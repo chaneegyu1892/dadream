@@ -12,6 +12,11 @@ export interface MemberRow {
   name: string;
   photo_path: string | null;
   cell_id: string | null;
+  /** 셀 역할(없음/셀리더). DB로 관리하지 않는 고정 값. */
+  cell_role: string | null;
+  /** 직책(회장/부회장/...). member_duties로 관리. */
+  officer_position: string | null;
+  /** 레거시/호환 필드. 표시는 cell_role/officer_position를 우선 사용한다. */
   duty: string | null;
   is_officer: boolean;
   active: boolean;

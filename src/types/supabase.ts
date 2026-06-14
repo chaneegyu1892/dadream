@@ -246,12 +246,14 @@ export type Database = {
         Row: {
           active: boolean
           cell_id: string | null
+          cell_role: string | null
           created_at: string
           duty: string | null
           gender: string | null
           id: string
           is_officer: boolean
           name: string
+          officer_position: string | null
           photo_path: string | null
           registered_at: string | null
           updated_at: string
@@ -259,12 +261,14 @@ export type Database = {
         Insert: {
           active?: boolean
           cell_id?: string | null
+          cell_role?: string | null
           created_at?: string
           duty?: string | null
           gender?: string | null
           id?: string
           is_officer?: boolean
           name: string
+          officer_position?: string | null
           photo_path?: string | null
           registered_at?: string | null
           updated_at?: string
@@ -272,12 +276,14 @@ export type Database = {
         Update: {
           active?: boolean
           cell_id?: string | null
+          cell_role?: string | null
           created_at?: string
           duty?: string | null
           gender?: string | null
           id?: string
           is_officer?: boolean
           name?: string
+          officer_position?: string | null
           photo_path?: string | null
           registered_at?: string | null
           updated_at?: string

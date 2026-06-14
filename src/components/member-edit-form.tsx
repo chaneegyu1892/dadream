@@ -19,7 +19,8 @@ type Baptized = 'true' | 'false' | 'unknown';
 export interface MemberEditInitial {
   name: string;
   cellId: string;
-  duty: string;
+  cellRole: string;
+  officerPosition: string;
   gender: string;
   registeredAt: string;
   phone: string;
@@ -32,8 +33,8 @@ export interface MemberEditInitial {
 interface MemberEditFormProps {
   memberId: string;
   cells: { id: string; name: string }[];
-  /** member_duties에서 불러온 직분 목록(`없음` 의사옵션은 폼이 직접 덧붙임). */
-  dutyOptions: string[];
+  /** member_duties에서 불러온 직책 목록(`없음` 의사옵션은 폼이 직접 덧붙임). */
+  officerPositionOptions: string[];
   initial: MemberEditInitial;
 }
 
@@ -43,10 +44,11 @@ const GENDER_OPTIONS = [
   { value: '여자', label: '여자' },
 ];
 
-export function MemberEditForm({ memberId, cells, dutyOptions, initial }: MemberEditFormProps) {
+export function MemberEditForm({ memberId, cells, officerPositionOptions, initial }: MemberEditFormProps) {
   const router = useRouter();
   const [cellId, setCellId] = useState<string>(initial.cellId || 'none');
-  const [duty, setDuty] = useState<string>(initial.duty || 'none');
+  const [cellRole, setCellRole] = useState<string>(initial.cellRole || 'none');
+  const [officerPosition, setOfficerPosition] = useState<string>(initial.officerPosition || 'none');
   const [gender, setGender] = useState<string>(initial.gender || 'none');
   const [baptized, setBaptized] = useState<Baptized>(initial.baptized);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,8 @@ export function MemberEditForm({ memberId, cells, dutyOptions, initial }: Member
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     formData.set('cellId', cellId === 'none' ? '' : cellId);
-    formData.set('duty', duty === 'none' ? '' : duty);
+    formData.set('cellRole', cellRole === 'none' ? '' : cellRole);
+    formData.set('officerPosition', officerPosition === 'none' ? '' : officerPosition);
     formData.set('gender', gender === 'none' ? '' : gender);
     formData.set('baptized', baptized);
     setError(null);
@@ -96,14 +99,26 @@ export function MemberEditForm({ memberId, cells, dutyOptions, initial }: Member
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>직분</Label>
-          <Select value={duty} onValueChange={setDuty}>
+          <Label>셀 역할</Label>
+          <Select value={cellRole} onValueChange={setCellRole}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">없음</SelectItem>
-              {dutyOptions.map((option) => (
+              <SelectItem value="셀리더">셀리더</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>직책</Label>
+          <Select value={officerPosition} onValueChange={setOfficerPosition}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">없음</SelectItem>
+              {officerPositionOptions.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -111,21 +126,22 @@ export function MemberEditForm({ memberId, cells, dutyOptions, initial }: Member
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label>성별</Label>
-          <Select value={gender} onValueChange={setGender}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {GENDER_OPTIONS.map((g) => (
-                <SelectItem key={g.value} value={g.value}>
-                  {g.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>성별</Label>
+        <Select value={gender} onValueChange={setGender}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {GENDER_OPTIONS.map((g) => (
+              <SelectItem key={g.value} value={g.value}>
+                {g.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">

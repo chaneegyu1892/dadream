@@ -3,33 +3,37 @@ import { parseMemberEdit } from '@/lib/member-edit';
 
 const VALID_UUID = '11111111-1111-4111-8111-111111111111';
 
-function ok(input: Record<string, unknown>) {
-  const result = parseMemberEdit(input);
+function ok(input: Record<string, unknown>, allowedPositions?: readonly string[]) {
+  const result = parseMemberEdit(input, allowedPositions);
   if (!result.success) throw new Error(`예상치 못한 실패: ${result.error}`);
   return result.data;
 }
 
 describe('parseMemberEdit', () => {
-  it('정상 입력을 member/contact 페이로드로 분리한다', () => {
+  it('셀 역할과 직책을 동시에 페이로드로 분리한다', () => {
     const data = ok({
       name: '김진규',
       cellId: VALID_UUID,
-      duty: '셀리더',
+      cellRole: '셀리더',
+      officerPosition: '총무',
       isOfficer: 'on',
       active: 'on',
-      gender: 'male',
+      gender: '남자',
       registeredAt: '2020-01-05',
       phone: '010-1234-5678',
       birthDate: '1998-03-15',
       baptized: 'true',
     });
+
     expect(data.member).toEqual({
       name: '김진규',
       cell_id: VALID_UUID,
-      duty: '셀리더',
+      cell_role: '셀리더',
+      officer_position: '총무',
+      duty: '총무',
       is_officer: true,
       active: true,
-      gender: 'male',
+      gender: '남자',
       registered_at: '2020-01-05',
     });
     expect(data.contact).toEqual({
@@ -39,24 +43,32 @@ describe('parseMemberEdit', () => {
     });
   });
 
-  it('이름/직분/전화번호/성별의 앞뒤 공백을 제거한다', () => {
-    const data = ok({
-      name: '  김진규  ',
-      duty: '  셀리더  ',
-      phone: '  010-1111-2222  ',
-      gender: '  남  ',
-    });
-    expect(data.member.name).toBe('김진규');
+  it('직책이 없고 셀리더만 있으면 레거시 duty를 셀리더로 파생한다', () => {
+    const data = ok({ name: '김진규', cellRole: '셀리더', officerPosition: '' });
+    expect(data.member.cell_role).toBe('셀리더');
+    expect(data.member.officer_position).toBeNull();
     expect(data.member.duty).toBe('셀리더');
-    expect(data.contact.phone).toBe('010-1111-2222');
-    expect(data.member.gender).toBe('남');
   });
 
-  it('빈 문자열·공백만 있는 선택 항목은 null로 변환한다', () => {
+  it('이름/연락처/성별의 앞뒤 공백을 제거한다', () => {
+    const data = ok({
+      name: '  김진규  ',
+      phone: '  010-1111-2222  ',
+      gender: '  남자  ',
+      officerPosition: '  회장  ',
+    });
+    expect(data.member.name).toBe('김진규');
+    expect(data.contact.phone).toBe('010-1111-2222');
+    expect(data.member.gender).toBe('남자');
+    expect(data.member.officer_position).toBe('회장');
+  });
+
+  it('빈 문자열·none·없음 선택 항목은 null로 변환한다', () => {
     const data = ok({
       name: '김진규',
       cellId: '',
-      duty: '   ',
+      cellRole: '없음',
+      officerPosition: 'none',
       gender: '',
       registeredAt: '',
       phone: '',
@@ -64,6 +76,8 @@ describe('parseMemberEdit', () => {
       baptized: 'unknown',
     });
     expect(data.member.cell_id).toBeNull();
+    expect(data.member.cell_role).toBeNull();
+    expect(data.member.officer_position).toBeNull();
     expect(data.member.duty).toBeNull();
     expect(data.member.gender).toBeNull();
     expect(data.member.registered_at).toBeNull();
@@ -72,27 +86,35 @@ describe('parseMemberEdit', () => {
     expect(data.contact.baptized).toBeNull();
   });
 
-  it('직분은 드롭다운 목록 값만 허용한다', () => {
-    for (const duty of ['셀리더', '회장', '부회장', '총무', '부총무', '서기', '회계', '팀장']) {
-      expect(ok({ name: '김진규', duty }).member.duty).toBe(duty);
+  it('직책은 기본 드롭다운 목록 값만 허용하고 셀리더는 거절한다', () => {
+    for (const position of ['회장', '부회장', '총무', '부총무', '서기', '회계', '팀장']) {
+      expect(ok({ name: '김진규', officerPosition: position }).member.officer_position).toBe(position);
     }
 
-    const result = parseMemberEdit({ name: '김진규', duty: '쎌리더' });
-    expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toContain('직분');
+    const typo = parseMemberEdit({ name: '김진규', officerPosition: '쎌리더' });
+    expect(typo.success).toBe(false);
+    if (!typo.success) expect(typo.error).toContain('직책');
+
+    const cellLeaderAsPosition = parseMemberEdit({ name: '김진규', officerPosition: '셀리더' });
+    expect(cellLeaderAsPosition.success).toBe(false);
+    if (!cellLeaderAsPosition.success) expect(cellLeaderAsPosition.error).toContain('직책');
   });
 
-  it('없음/none 직분 선택은 null로 변환한다', () => {
-    expect(ok({ name: '김진규', duty: '없음' }).member.duty).toBeNull();
-    expect(ok({ name: '김진규', duty: 'none' }).member.duty).toBeNull();
+  it('셀 역할은 없음 또는 셀리더만 허용한다', () => {
+    expect(ok({ name: '김진규', cellRole: '셀리더' }).member.cell_role).toBe('셀리더');
+    expect(ok({ name: '김진규', cellRole: '없음' }).member.cell_role).toBeNull();
+
+    const bad = parseMemberEdit({ name: '김진규', cellRole: '셀장' });
+    expect(bad.success).toBe(false);
+    if (!bad.success) expect(bad.error).toContain('셀 역할');
   });
 
-  it('DB에서 내려온 사용자 정의 직분 목록으로 검증할 수 있다', () => {
-    const custom = parseMemberEdit({ name: '김진규', duty: '찬양팀장' }, ['찬양팀장']);
+  it('DB에서 내려온 사용자 정의 직책 목록으로 검증할 수 있다', () => {
+    const custom = parseMemberEdit({ name: '김진규', officerPosition: '찬양팀장' }, ['찬양팀장']);
     expect(custom.success).toBe(true);
-    if (custom.success) expect(custom.data.member.duty).toBe('찬양팀장');
+    if (custom.success) expect(custom.data.member.officer_position).toBe('찬양팀장');
 
-    const oldDefault = parseMemberEdit({ name: '김진규', duty: '셀리더' }, ['찬양팀장']);
+    const oldDefault = parseMemberEdit({ name: '김진규', officerPosition: '회장' }, ['찬양팀장']);
     expect(oldDefault.success).toBe(false);
   });
 
@@ -151,12 +173,17 @@ describe('parseMemberEdit', () => {
     fd.set('phone', '010-9999-8888');
     fd.set('baptized', 'false');
     fd.set('cellId', '');
+    fd.set('cellRole', '셀리더');
+    fd.set('officerPosition', '회계');
     const result = parseMemberEdit(fd);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.member.name).toBe('김진규');
       expect(result.data.member.is_officer).toBe(true);
       expect(result.data.member.cell_id).toBeNull();
+      expect(result.data.member.cell_role).toBe('셀리더');
+      expect(result.data.member.officer_position).toBe('회계');
+      expect(result.data.member.duty).toBe('회계');
       expect(result.data.contact.phone).toBe('010-9999-8888');
       expect(result.data.contact.baptized).toBe(false);
     }
