@@ -1,11 +1,13 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
-import { visibleFields } from '@/lib/roles';
+import { roleAtLeast, visibleFields } from '@/lib/roles';
 import { VISIT_STATUS_LABELS } from '@/lib/visits';
 import { getSignedPhotoUrls } from '@/lib/photos';
 import { createClient } from '@/lib/supabase/server';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MemberDetailPageProps {
@@ -28,6 +30,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
   const member = memberData;
 
   const isSelf = session.memberId === id;
+  const canEdit = roleAtLeast(session.role, 'officer');
   const fields = visibleFields(session.role, isSelf);
   const showContact = fields.includes('phone');
   const showPrivate = fields.includes('address');
@@ -63,7 +66,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
           {photoUrl && <AvatarImage src={photoUrl} alt={member.name} />}
           <AvatarFallback className="text-2xl">{member.name.slice(0, 2)}</AvatarFallback>
         </Avatar>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold">{member.name}</h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             <span>{member.cells?.name ?? '무소속'}</span>
@@ -71,6 +74,11 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
             {member.is_officer && <Badge variant="secondary">임원</Badge>}
           </div>
         </div>
+        {canEdit && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/members/${id}/edit`}>명부 수정</Link>
+          </Button>
+        )}
       </header>
 
       {showContact && contact && (

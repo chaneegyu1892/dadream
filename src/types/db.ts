@@ -15,6 +15,8 @@ export interface MemberRow {
   duty: string | null;
   is_officer: boolean;
   active: boolean;
+  gender: string | null;
+  registered_at: string | null;
 }
 
 export interface MemberContactRow {
