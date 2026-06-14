@@ -38,9 +38,9 @@ export function CellOverviewGrid({ cells }: CellOverviewGridProps) {
               </div>
 
               <div className="mt-2 space-y-1 text-xs">
-                <p className="flex items-baseline gap-1.5">
-                  <span className="shrink-0 font-medium text-muted-foreground">셀리더</span>
-                  <span className="min-w-0 truncate font-medium">{leaders}</span>
+                <p className="flex items-baseline gap-1.5 font-semibold text-foreground">
+                  <span className="shrink-0">셀리더</span>
+                  <span className="min-w-0 truncate">{leaders}</span>
                 </p>
 
                 {cell.memberNames.length > 0 && (
