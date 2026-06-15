@@ -16,3 +16,13 @@ export function revalidateMemberCaches(): void {
 export function revalidateCalendarCaches(): void {
   revalidateTag(DASHBOARD_CACHE_TAGS.calendar, { expire: 0 });
 }
+
+/** 홈 "다가오는 일정(7일)" 캐시를 즉시 만료한다. 일정이 바뀔 때 호출한다. */
+export function revalidateHomeEventCaches(): void {
+  revalidateTag(DASHBOARD_CACHE_TAGS.homeEvents, { expire: 0 });
+}
+
+/** 홈 "예배위원" 배정 캐시를 즉시 만료한다. 배정이 바뀔 때 호출한다. */
+export function revalidateHomeServiceCaches(): void {
+  revalidateTag(DASHBOARD_CACHE_TAGS.homeService, { expire: 0 });
+}

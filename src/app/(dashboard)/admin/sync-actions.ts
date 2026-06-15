@@ -2,7 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSessionProfile } from '@/lib/auth';
-import { revalidateCalendarCaches, revalidateMemberCaches } from '@/lib/dashboard-cache-invalidation';
+import {
+  revalidateCalendarCaches,
+  revalidateHomeEventCaches,
+  revalidateHomeServiceCaches,
+  revalidateMemberCaches,
+} from '@/lib/dashboard-cache-invalidation';
 import { roleAtLeast } from '@/lib/roles';
 
 export type SyncDashboardDataResult = {
@@ -23,6 +28,8 @@ export async function syncDashboardData(): Promise<SyncDashboardDataResult> {
 
   revalidateMemberCaches();
   revalidateCalendarCaches();
+  revalidateHomeEventCaches();
+  revalidateHomeServiceCaches();
   revalidatePath('/', 'layout');
   revalidatePath('/members');
   revalidatePath('/visits');

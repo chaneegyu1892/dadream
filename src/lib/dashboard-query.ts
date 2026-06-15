@@ -138,12 +138,29 @@ export function getCurrentMonthWindow(now = new Date()): DateWindow {
   };
 }
 
-function toKstDateParts(date: Date): { year: number; month: number } {
+/**
+ * 홈 화면 "다가오는 일정(7일)"용 안정 윈도우.
+ * KST 기준 오늘 0시부터 +7일 끝까지로 잡는다. 같은 KST 날짜 안에서는 항상 같은 값이라
+ * `unstable_cache` keyParts가 하루 단위로만 바뀌어 캐시 적중률이 높다.
+ */
+export function getHomeEventsWindow(now = new Date()): DateWindow {
+  const { year, month, day } = toKstDateParts(now);
+  const dayStart = new Date(Date.UTC(year, month - 1, day));
+  const dayEnd = new Date(Date.UTC(year, month - 1, day + 7));
+
+  return {
+    from: formatKstDateTime(dayStart, false),
+    to: formatKstDateTime(dayEnd, true),
+  };
+}
+
+function toKstDateParts(date: Date): { year: number; month: number; day: number } {
   const kstTime = date.getTime() + KST_OFFSET_MINUTES * 60 * 1000;
   const kstDate = new Date(kstTime);
   return {
     year: kstDate.getUTCFullYear(),
     month: kstDate.getUTCMonth() + 1,
+    day: kstDate.getUTCDate(),
   };
 }
 

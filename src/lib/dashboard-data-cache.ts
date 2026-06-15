@@ -3,6 +3,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import {
   CALENDAR_CACHE_SECONDS,
   DASHBOARD_CACHE_TAGS,
+  HOME_EVENTS_CACHE_SECONDS,
+  HOME_SERVICE_CACHE_SECONDS,
   STABLE_CACHE_SECONDS,
 } from '@/lib/dashboard-cache-tags';
 import type { DateWindow } from '@/lib/dashboard-query';
@@ -27,6 +29,14 @@ export interface CalendarDisplayData {
   events: EventRow[];
   visits: CalendarVisitRow[];
 }
+
+/** 홈 "예배위원" 카드용 배정 요약 행(이번 주/다음 주 주일). */
+export type HomeServiceRow = {
+  id: string;
+  service_date: string;
+  service_roles: { name: string; sort_order: number } | null;
+  members: { name: string } | null;
+};
 
 /**
  * 현재 요청의 access token으로 인증된 supabase-js 클라이언트를 만든다.
@@ -149,5 +159,62 @@ export function getCachedCalendarDisplay(
     },
     ['dashboard-calendar', userId, from, to],
     { tags: [DASHBOARD_CACHE_TAGS.calendar], revalidate: CALENDAR_CACHE_SECONDS },
+  )();
+}
+
+/**
+ * 홈 "다가오는 일정(7일)" 카드용 일정 목록. 안정 윈도우(KST 오늘~+7일)를 keyParts로 받아 캐시한다.
+ * 윈도우는 시간 의존적이므로 캐시 바깥에서 계산해 넘긴다. 일정 생성/수정 시 태그로 즉시 무효화된다.
+ * UI에서 이미 지난 오늘 일정을 필터링한 뒤 5개만 보여주므로, 과거 일정이 앞쪽을 채워도
+ * 이후 예정 일정이 사라지지 않게 넉넉히 가져온다.
+ */
+export function getCachedHomeEvents(
+  userId: string,
+  accessToken: string,
+  window: DateWindow,
+): Promise<EventRow[]> {
+  const { from, to } = window;
+  return unstable_cache(
+    async () => {
+      const supabase = createAuthedClient(accessToken);
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, starts_at, ends_at, location, description, color')
+        .gte('starts_at', from)
+        .lte('starts_at', to)
+        .order('starts_at')
+        .limit(100);
+
+      if (error) throw new Error(`다가오는 일정 조회 실패: ${error.message}`);
+      return (data ?? []) as EventRow[];
+    },
+    ['dashboard-home-events', userId, from, to],
+    { tags: [DASHBOARD_CACHE_TAGS.homeEvents], revalidate: HOME_EVENTS_CACHE_SECONDS },
+  )();
+}
+
+/**
+ * 홈 "예배위원" 카드용 이번 주/다음 주 주일 배정. 주일 날짜(YYYY-MM-DD)는 시간 의존적이므로
+ * 캐시 바깥에서 계산해 keyParts로 넘긴다. 배정 추가/삭제 시 태그로 즉시 무효화된다.
+ */
+export function getCachedHomeService(
+  userId: string,
+  accessToken: string,
+  thisWeek: string,
+  nextWeek: string,
+): Promise<HomeServiceRow[]> {
+  return unstable_cache(
+    async () => {
+      const supabase = createAuthedClient(accessToken);
+      const { data, error } = await supabase
+        .from('service_assignments')
+        .select('id, service_date, service_roles(name, sort_order), members(name)')
+        .in('service_date', [thisWeek, nextWeek]);
+
+      if (error) throw new Error(`예배위원 배정 조회 실패: ${error.message}`);
+      return (data ?? []) as unknown as HomeServiceRow[];
+    },
+    ['dashboard-home-service', userId, thisWeek, nextWeek],
+    { tags: [DASHBOARD_CACHE_TAGS.homeService], revalidate: HOME_SERVICE_CACHE_SECONDS },
   )();
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildCellSummaries,
   getCurrentMonthWindow,
+  getHomeEventsWindow,
   getPageRange,
   parseMemberSearchParams,
   parsePositivePage,
@@ -100,6 +101,17 @@ describe('getCurrentMonthWindow', () => {
     expect(getCurrentMonthWindow()).toEqual({
       from: '2026-05-01T00:00:00.000+09:00',
       to: '2026-07-31T23:59:59.999+09:00',
+    });
+  });
+});
+
+describe('getHomeEventsWindow', () => {
+  it('KST 기준 오늘부터 7일 끝까지의 안정 윈도우를 만든다', () => {
+    vi.setSystemTime(new Date('2026-06-15T12:00:00+09:00'));
+
+    expect(getHomeEventsWindow()).toEqual({
+      from: '2026-06-15T00:00:00.000+09:00',
+      to: '2026-06-22T23:59:59.999+09:00',
     });
   });
 });

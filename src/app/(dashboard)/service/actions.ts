@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
+import { revalidateHomeServiceCaches } from '@/lib/dashboard-cache-invalidation';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
 
@@ -38,6 +39,7 @@ export async function assignService(input: z.infer<typeof assignSchema>): Promis
     return { error: error.code === '23505' ? '이미 배정된 청년이에요.' : '배정에 실패했어요.' };
   }
 
+  revalidateHomeServiceCaches();
   revalidatePath('/service');
   revalidatePath('/');
   return {};
@@ -58,6 +60,7 @@ export async function unassignService(input: { assignmentId: string }): Promise<
 
   if (error) return { error: '삭제에 실패했어요.' };
 
+  revalidateHomeServiceCaches();
   revalidatePath('/service');
   revalidatePath('/');
   return {};
@@ -93,6 +96,8 @@ export async function removeServiceRole(input: { roleId: string }): Promise<{ er
   const { error } = await supabase.from('service_roles').delete().eq('id', parsed.data.roleId);
   if (error) return { error: '삭제에 실패했어요.' };
 
+  // 직책 삭제는 해당 직책의 배정도 함께 사라지므로 홈 배정 캐시를 무효화한다.
+  revalidateHomeServiceCaches();
   revalidatePath('/service');
   return {};
 }

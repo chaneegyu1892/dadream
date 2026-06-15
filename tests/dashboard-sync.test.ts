@@ -39,6 +39,8 @@ describe('syncDashboardData', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith(DASHBOARD_CACHE_TAGS.members, { expire: 0 });
     expect(revalidateTagMock).toHaveBeenCalledWith(DASHBOARD_CACHE_TAGS.cells, { expire: 0 });
     expect(revalidateTagMock).toHaveBeenCalledWith(DASHBOARD_CACHE_TAGS.calendar, { expire: 0 });
+    expect(revalidateTagMock).toHaveBeenCalledWith(DASHBOARD_CACHE_TAGS.homeEvents, { expire: 0 });
+    expect(revalidateTagMock).toHaveBeenCalledWith(DASHBOARD_CACHE_TAGS.homeService, { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/', 'layout');
     expect(revalidatePathMock).toHaveBeenCalledWith('/members');
     expect(revalidatePathMock).toHaveBeenCalledWith('/visits');

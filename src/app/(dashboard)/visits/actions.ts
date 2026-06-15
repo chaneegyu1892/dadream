@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getSessionProfile } from '@/lib/auth';
-import { revalidateCalendarCaches } from '@/lib/dashboard-cache-invalidation';
+import {
+  revalidateCalendarCaches,
+  revalidateHomeEventCaches,
+} from '@/lib/dashboard-cache-invalidation';
 import { parseCalendarEventInput, type CalendarEventInput } from '@/lib/events';
 import { roleAtLeast } from '@/lib/roles';
 import { canTransition, formatSlot, slotToIso, type PreferredSlot, type VisitStatus } from '@/lib/visits';
@@ -57,6 +60,7 @@ export async function createCalendarEvent(input: CalendarEventInput): Promise<{ 
   }
 
   revalidateCalendarCaches();
+  revalidateHomeEventCaches();
   revalidatePath('/visits');
   revalidatePath('/');
   return {};
