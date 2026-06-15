@@ -38,6 +38,13 @@ describe('updateSession', () => {
     expect(createServerClientMock).not.toHaveBeenCalled();
   });
 
+  it('PWA launch 화면은 세션 조회 없이 바로 페인트되어야 한다', async () => {
+    const response = await updateSession(request('/launch'));
+
+    expect(response.status).toBe(200);
+    expect(createServerClientMock).not.toHaveBeenCalled();
+  });
+
   it('미로그인 사용자가 보호 경로를 열면 로그인으로 보낸다', async () => {
     createServerClientMock.mockReturnValue({
       auth: {
