@@ -48,12 +48,12 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
   return (
     <div className="rounded-xl border">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <Button variant="ghost" size="sm" onClick={() => moveMonth(-1)}>
-          ←
+        <Button variant="ghost" size="sm" onClick={() => moveMonth(-1)} aria-label="이전 달">
+          <span aria-hidden="true">←</span>
         </Button>
         <p className="font-semibold">{format(month, 'yyyy년 M월')}</p>
-        <Button variant="ghost" size="sm" onClick={() => moveMonth(1)}>
-          →
+        <Button variant="ghost" size="sm" onClick={() => moveMonth(1)} aria-label="다음 달">
+          <span aria-hidden="true">→</span>
         </Button>
       </div>
 
@@ -130,7 +130,10 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                     item.kind === 'visit' ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900',
                   )}
                 >
-                  <span className="mr-1.5 text-xs">{item.kind === 'visit' ? '🏠 심방' : '📅 일정'}</span>
+                  <span className="mr-1.5 text-xs">
+                    <span aria-hidden="true">{item.kind === 'visit' ? '🏠' : '📅'}</span>{' '}
+                    {item.kind === 'visit' ? '심방' : '일정'}
+                  </span>
                   {item.title}
                 </div>
               ))}

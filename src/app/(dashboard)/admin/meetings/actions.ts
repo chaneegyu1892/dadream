@@ -53,7 +53,9 @@ export async function createMeeting(
         .from('meeting_items')
         .select('id, content, assignee_member_id, sort_order')
         .eq('meeting_id', lastMeeting.id)
-        .eq('done', false);
+        .eq('done', false)
+        .order('sort_order')
+        .limit(200);
 
       if (undone && undone.length > 0) {
         const { error: carryError } = await supabase.from('meeting_items').insert(

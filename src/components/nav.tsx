@@ -34,7 +34,9 @@ export function Nav({ role }: { role: UserRole }) {
               isActive(item.href) ? 'font-semibold text-foreground' : 'text-muted-foreground',
             )}
           >
-            <span className="text-lg leading-none">{item.icon}</span>
+            <span className="text-lg leading-none" aria-hidden="true">
+              {item.icon}
+            </span>
             {item.label}
           </Link>
         ))}
@@ -57,7 +59,7 @@ export function Nav({ role }: { role: UserRole }) {
                     : 'text-muted-foreground hover:bg-accent/50',
                 )}
               >
-                <span>{item.icon}</span>
+                <span aria-hidden="true">{item.icon}</span>
                 {item.label}
               </Link>
             ))}
