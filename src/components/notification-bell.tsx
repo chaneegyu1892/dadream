@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
 import { markAllNotificationsRead } from '@/app/(dashboard)/notification-actions';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,11 +28,37 @@ export interface NotificationItem {
 interface NotificationBellProps {
   notifications: NotificationItem[];
   unreadCount: number;
+  /** 실시간 구독 대상. 없으면 구독을 건너뛴다(Suspense fallback 등). */
+  profileId?: string;
 }
 
-export function NotificationBell({ notifications, unreadCount }: NotificationBellProps) {
+export function NotificationBell({ notifications, unreadCount, profileId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const router = useRouter();
+
+  // 새 알림이 들어오면 서버 컴포넌트를 갱신해 종 배지를 즉시 반영한다.
+  useEffect(() => {
+    if (!profileId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`notifications:${profileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `profile_id=eq.${profileId}`,
+        },
+        () => router.refresh(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profileId, router]);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -45,7 +73,7 @@ export function NotificationBell({ notifications, unreadCount }: NotificationBel
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="relative" aria-label="알림">
-          🔔
+          <span aria-hidden="true">🔔</span>
           {unreadCount > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
               {unreadCount > 9 ? '9+' : unreadCount}

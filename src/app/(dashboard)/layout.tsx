@@ -22,7 +22,9 @@ export default async function DashboardLayout({
         <header className="flex items-center justify-between border-b px-4 py-2 md:justify-end md:px-8">
           <p className="font-bold md:hidden">다드림</p>
           <div className="flex items-center gap-1">
-            <Suspense fallback={<NotificationBell notifications={[]} unreadCount={0} />}>
+            <Suspense
+              fallback={<NotificationBell notifications={[]} unreadCount={0} profileId={profile.userId} />}
+            >
               <NotificationBellLoader profileId={profile.userId} />
             </Suspense>
             <LogoutButton />
@@ -57,6 +59,7 @@ async function NotificationBellLoader({ profileId }: { profileId: string }) {
         createdAt: n.created_at,
       }))}
       unreadCount={unreadCount}
+      profileId={profileId}
     />
   );
 }

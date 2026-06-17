@@ -1,7 +1,35 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
+
+/**
+ * 심층 방어용 보안 응답 헤더.
+ * 청년부 명부에 사진·연락처·생일이 담기므로 클릭재킹·MIME 스니핑·정보 유출을 기본 차단한다.
+ * CSP는 앱 동작(인라인 스타일/스크립트, Supabase fetch·websocket)을 깨지 않도록
+ * 클릭재킹·base 변조·플러그인만 제한하는 보수적 구성으로 둔다.
+ */
+const securityHeaders = [
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: ["frame-ancestors 'none'", "base-uri 'self'", "object-src 'none'"].join('; '),
+  },
+];
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
