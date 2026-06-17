@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { config } from '@/middleware';
+import { config } from '@/proxy';
 
-describe('middleware config', () => {
-  it('prefetch 요청은 middleware 세션 검증을 건너뛴다', () => {
+describe('proxy config', () => {
+  it('prefetch 요청은 proxy 세션 검증을 건너뛴다', () => {
     expect(config.matcher).toEqual([
       expect.objectContaining({
         missing: expect.arrayContaining([
