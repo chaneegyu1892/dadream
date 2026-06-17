@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
+import { getSignedPhotoUrls } from '@/lib/photos';
 import { createClient } from '@/lib/supabase/server';
 import { MemberEditForm } from '@/components/member-edit-form';
 import { FIXED_CELL_ROLE } from '@/lib/member-edit';
@@ -28,7 +29,7 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
   const [memberRes, contactRes, cellsRes, dutiesRes] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, cell_id, cell_role, officer_position, duty, is_officer, active, gender, registered_at')
+      .select('id, name, photo_path, cell_id, cell_role, officer_position, duty, is_officer, active, gender, registered_at')
       .eq('id', id)
       .single(),
     supabase
@@ -47,6 +48,11 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
 
   const member = memberRes.data;
   if (!member) notFound();
+
+  const photoUrls = member.photo_path
+    ? await getSignedPhotoUrls([member.photo_path])
+    : new Map<string, string>();
+  const currentPhotoUrl = member.photo_path ? (photoUrls.get(member.photo_path) ?? null) : null;
 
   const contact = contactRes.data;
   const cells = (cellsRes.data ?? []) as CellRow[];
@@ -75,6 +81,8 @@ export default async function MemberEditPage({ params }: MemberEditPageProps) {
       </header>
       <MemberEditForm
         memberId={member.id}
+        memberName={member.name}
+        currentPhotoUrl={currentPhotoUrl}
         cells={cells.map((c) => ({ id: c.id, name: c.name }))}
         officerPositionOptions={officerPositionOptions}
         initial={{

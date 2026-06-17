@@ -10,7 +10,10 @@ import {
   FIXED_CELL_ROLE,
   parseMemberEdit,
 } from '@/lib/member-edit';
+import { PHOTO_BUCKET } from '@/lib/photos';
+import { MAX_PHOTO_BYTES, photoExtensionFor } from '@/lib/photo-validation';
 import { createClient } from '@/lib/supabase/server';
+import type { TablesUpdate } from '@/types/supabase';
 
 const memberIdSchema = z.string().uuid();
 
@@ -49,7 +52,7 @@ export async function updateMember(
 
   const { data: currentMember, error: currentMemberError } = await supabase
     .from('members')
-    .select('cell_role, officer_position, duty')
+    .select('cell_role, officer_position, duty, photo_path')
     .eq('id', memberId)
     .single();
   if (currentMemberError || !currentMember) {
@@ -77,13 +80,56 @@ export async function updateMember(
     return { error: parsed.error };
   }
 
+  // 사진 처리: 새 파일 업로드(교체) 또는 삭제. 둘 다 아니면 기존 사진을 유지한다.
+  const removePhoto = formData.get('removePhoto') === 'on';
+  const photo = formData.get('photo');
+  // undefined = 변경 없음, null = 삭제, string = 새 경로
+  let nextPhotoPath: string | null | undefined;
+  let photoToDelete: string | null = null;
+
+  if (photo instanceof File && photo.size > 0) {
+    if (photo.size > MAX_PHOTO_BYTES) {
+      return { error: '사진은 5MB 이하로 올려주세요.' };
+    }
+    const ext = photoExtensionFor(photo.type);
+    if (!ext) {
+      return { error: 'JPG, PNG, WebP, GIF 이미지만 올릴 수 있어요.' };
+    }
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .upload(path, photo, { contentType: photo.type });
+    if (uploadError) {
+      console.error('[updateMember] 사진 업로드 실패:', uploadError.message);
+      return { error: '사진 업로드에 실패했어요. 다시 시도해주세요.' };
+    }
+    nextPhotoPath = path;
+    photoToDelete = currentMember.photo_path ?? null; // 이전 사진은 저장 후 정리
+  } else if (removePhoto && currentMember.photo_path) {
+    nextPhotoPath = null;
+    photoToDelete = currentMember.photo_path;
+  }
+
+  const memberUpdate: TablesUpdate<'members'> = { ...parsed.data.member, updated_at: now };
+  if (nextPhotoPath !== undefined) {
+    memberUpdate.photo_path = nextPhotoPath;
+  }
+
   const { error: memberError } = await supabase
     .from('members')
-    .update({ ...parsed.data.member, updated_at: now })
+    .update(memberUpdate)
     .eq('id', memberId);
   if (memberError) {
     console.error('[updateMember] members update 실패:', memberError.message);
     return { error: '명부 정보를 저장하지 못했어요. 다시 시도해주세요.' };
+  }
+
+  // 명부 갱신이 성공한 뒤에만 이전 사진을 스토리지에서 정리한다(실패해도 본 작업은 성공).
+  if (photoToDelete) {
+    const { error: removeError } = await supabase.storage.from(PHOTO_BUCKET).remove([photoToDelete]);
+    if (removeError) {
+      console.error('[updateMember] 이전 사진 삭제 실패:', removeError.message);
+    }
   }
 
   const { error: contactError } = await supabase
