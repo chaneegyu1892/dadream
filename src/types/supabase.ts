@@ -36,6 +36,7 @@ export type Database = {
       }
       events: {
         Row: {
+          color: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -46,6 +47,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           title: string
         }
         Update: {
+          color?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -151,6 +154,30 @@ export type Database = {
         }
         Relationships: []
       }
+      member_duties: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       member_contact: {
         Row: {
           baptized: boolean | null
@@ -219,12 +246,14 @@ export type Database = {
         Row: {
           active: boolean
           cell_id: string | null
+          cell_role: string | null
           created_at: string
           duty: string | null
           gender: string | null
           id: string
           is_officer: boolean
           name: string
+          officer_position: string | null
           photo_path: string | null
           registered_at: string | null
           updated_at: string
@@ -232,12 +261,14 @@ export type Database = {
         Insert: {
           active?: boolean
           cell_id?: string | null
+          cell_role?: string | null
           created_at?: string
           duty?: string | null
           gender?: string | null
           id?: string
           is_officer?: boolean
           name: string
+          officer_position?: string | null
           photo_path?: string | null
           registered_at?: string | null
           updated_at?: string
@@ -245,12 +276,14 @@ export type Database = {
         Update: {
           active?: boolean
           cell_id?: string | null
+          cell_role?: string | null
           created_at?: string
           duty?: string | null
           gender?: string | null
           id?: string
           is_officer?: boolean
           name?: string
+          officer_position?: string | null
           photo_path?: string | null
           registered_at?: string | null
           updated_at?: string

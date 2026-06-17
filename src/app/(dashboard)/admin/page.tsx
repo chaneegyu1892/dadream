@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth';
 import { roleAtLeast } from '@/lib/roles';
 import { createClient } from '@/lib/supabase/server';
+import { DashboardSyncButton } from '@/components/dashboard-sync-button';
 import { Badge } from '@/components/ui/badge';
 
 export default async function AdminPage() {
@@ -44,6 +45,13 @@ export default async function AdminPage() {
       description: '명부에 새 청년을 등록해요',
       badge: 0,
     },
+    {
+      href: '/admin/member-duties',
+      icon: '🏷️',
+      title: '직책 관리',
+      description: '명부 수정 화면의 직책 선택지를 관리해요',
+      badge: 0,
+    },
   ];
 
   return (
@@ -52,6 +60,8 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-bold">관리</h1>
         <p className="mt-1 text-sm text-muted-foreground">임원 이상만 볼 수 있는 메뉴예요.</p>
       </header>
+
+      <DashboardSyncButton />
 
       <div className="space-y-2">
         {menus.map((menu) => (

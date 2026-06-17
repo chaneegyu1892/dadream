@@ -1,17 +1,23 @@
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth';
+import {
+  getCachedCells,
+  getCachedMembersOverview,
+  getDashboardAccessToken,
+} from '@/lib/dashboard-data-cache';
 import { buildCellSummaries, getPageRange, parseMemberSearchParams } from '@/lib/dashboard-query';
 import { roleAtLeast } from '@/lib/roles';
 import { getSignedPhotoUrls } from '@/lib/photos';
 import { createClient } from '@/lib/supabase/server';
 import { CellOverviewGrid } from '@/components/cell-overview-grid';
 import { MemberGrid } from '@/components/member-grid';
+import { MemberSearchForm } from '@/components/member-search-form';
 import { Button } from '@/components/ui/button';
 import type { CellRow, MemberRow } from '@/types/db';
 
 const MEMBERS_PAGE_SIZE = 48;
 
-type MemberSummaryRow = Pick<MemberRow, 'id' | 'name' | 'cell_id' | 'duty' | 'is_officer'>;
+type MemberSummaryRow = Pick<MemberRow, 'id' | 'name' | 'cell_id' | 'cell_role' | 'duty'>;
 
 interface MembersPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -19,35 +25,63 @@ interface MembersPageProps {
 
 export default async function MembersPage({ searchParams }: MembersPageProps) {
   const session = await getSessionProfile();
-  const supabase = await createClient();
   const { query, cellId, page } = parseMemberSearchParams((await searchParams) ?? {});
   const showingCellOverview = !query && cellId === 'all';
   const canManage = session ? roleAtLeast(session.role, 'officer') : false;
+  // 캐시 헬퍼는 현재 요청의 access token이 필요하다. 토큰이 없으면 라이브 조회로 폴백한다.
+  const accessToken = session ? await getDashboardAccessToken() : null;
 
   if (showingCellOverview) {
-    const [cellsRes, membersRes] = await Promise.all([
-      supabase.from('cells').select('id, name, sort_order').order('sort_order'),
-      supabase
-        .from('members')
-        .select('id, name, cell_id, duty, is_officer')
-        .eq('active', true)
-        .order('name'),
-    ]);
+    let cells: CellRow[];
+    let members: MemberSummaryRow[];
+    const fetchOverviewLive = async () => {
+      const supabase = await createClient();
+      const [cellsRes, membersRes] = await Promise.all([
+        supabase.from('cells').select('id, name, sort_order').order('sort_order'),
+        supabase
+          .from('members')
+          .select('id, name, cell_id, cell_role, duty')
+          .eq('active', true)
+          .order('name'),
+      ]);
+      return {
+        cells: (cellsRes.data ?? []) as CellRow[],
+        members: (membersRes.data ?? []) as MemberSummaryRow[],
+      };
+    };
 
-    const cells = (cellsRes.data ?? []) as CellRow[];
-    const members = (membersRes.data ?? []) as MemberSummaryRow[];
+    if (session && accessToken) {
+      const overview = await getCachedMembersOverview(session.userId, accessToken).catch((error) => {
+        console.error('[MembersPage] cached overview 조회 실패, live 조회로 폴백:', error);
+        return fetchOverviewLive();
+      });
+      cells = overview.cells;
+      members = overview.members;
+    } else {
+      const overview = await fetchOverviewLive();
+      cells = overview.cells;
+      members = overview.members;
+    }
+
     const summaries = buildCellSummaries(cells, members);
     const totalCount = summaries.reduce((sum, cell) => sum + cell.memberCount, 0);
 
     return (
       <div className="mx-auto max-w-6xl space-y-5">
         <MembersHeader totalCount={totalCount} canManage={canManage} />
+        <MemberSearchForm
+          cells={cells.map((c) => ({ id: c.id, name: c.name }))}
+          query=""
+          cellId="all"
+          hint="이름으로 검색하거나 셀을 선택하면 서버에서 바로 찾아 사진을 불러와요."
+        />
         <CellOverviewGrid cells={summaries} />
       </div>
     );
   }
 
   const { from, to } = getPageRange(page, MEMBERS_PAGE_SIZE);
+  const supabase = await createClient();
 
   let membersQuery = supabase
     .from('members')
@@ -65,14 +99,27 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
     membersQuery = membersQuery.eq('cell_id', cellId);
   }
 
-  const [membersRes, cellsRes] = await Promise.all([
+  // 실제 필터된 멤버 목록은 라이브로 조회하고, 거의 안 바뀌는 셀 드롭다운만 캐시를 쓴다.
+  const [membersRes, cells] = await Promise.all([
     membersQuery,
-    supabase.from('cells').select('id, name, sort_order').order('sort_order'),
+    session && accessToken
+      ? getCachedCells(session.userId, accessToken).catch((error) => {
+          console.error('[MembersPage] cached cells 조회 실패, live 조회로 폴백:', error);
+          return supabase
+            .from('cells')
+            .select('id, name, sort_order')
+            .order('sort_order')
+            .then((res) => (res.data ?? []) as CellRow[]);
+        })
+      : supabase
+          .from('cells')
+          .select('id, name, sort_order')
+          .order('sort_order')
+          .then((res) => (res.data ?? []) as CellRow[]),
   ]);
 
   const members = (membersRes.data ?? []) as MemberRow[];
   const totalCount = membersRes.count ?? members.length;
-  const cells = (cellsRes.data ?? []) as CellRow[];
   const photoUrls = await getSignedPhotoUrls(
     members.map((m) => m.photo_path).filter((p): p is string => Boolean(p)),
   );

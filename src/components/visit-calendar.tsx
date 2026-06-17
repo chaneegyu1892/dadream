@@ -14,16 +14,26 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import type { EventColor } from '@/lib/events';
 import { cn } from '@/lib/utils';
 
 export interface CalendarItem {
   id: string;
   date: string; // ISO
   title: string;
-  kind: 'event' | 'visit';
+  kind: 'event' | 'visit' | 'holiday';
+  color?: EventColor;
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const EVENT_COLOR_CLASS: Record<EventColor, string> = {
+  sky: 'bg-sky-100 text-sky-900',
+  emerald: 'bg-emerald-100 text-emerald-900',
+  amber: 'bg-amber-100 text-amber-900',
+  violet: 'bg-violet-100 text-violet-900',
+  pink: 'bg-pink-100 text-pink-900',
+};
 
 export function VisitCalendar({ items }: { items: CalendarItem[] }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -69,6 +79,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
         {days.map((day) => {
           const dayItems = itemsOn(day);
           const isSelected = selectedDay !== null && isSameDay(day, selectedDay);
+          const isHoliday = dayItems.some((item) => item.kind === 'holiday');
           return (
             <button
               key={day.toISOString()}
@@ -84,7 +95,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                 className={cn(
                   'inline-flex size-5 items-center justify-center rounded-full',
                   isToday(day) && 'bg-primary font-semibold text-primary-foreground',
-                  day.getDay() === 0 && !isToday(day) && 'text-red-500',
+                  (day.getDay() === 0 || isHoliday) && !isToday(day) && 'text-red-500',
                 )}
               >
                 {format(day, 'd')}
@@ -95,9 +106,7 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                     key={item.id}
                     className={cn(
                       'truncate rounded px-1 py-px leading-tight',
-                      item.kind === 'visit'
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-sky-100 text-sky-900',
+                      calendarItemClassName(item),
                     )}
                     title={item.title}
                   >
@@ -127,12 +136,12 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
                   key={item.id}
                   className={cn(
                     'rounded-lg px-3 py-2 text-sm',
-                    item.kind === 'visit' ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900',
+                    calendarItemClassName(item),
                   )}
                 >
                   <span className="mr-1.5 text-xs">
-                    <span aria-hidden="true">{item.kind === 'visit' ? '🏠' : '📅'}</span>{' '}
-                    {item.kind === 'visit' ? '심방' : '일정'}
+                    <span aria-hidden="true">{calendarItemIcon(item.kind)}</span>{' '}
+                    {calendarItemLabel(item.kind)}
                   </span>
                   {item.title}
                 </div>
@@ -143,4 +152,22 @@ export function VisitCalendar({ items }: { items: CalendarItem[] }) {
       )}
     </div>
   );
+}
+
+function calendarItemClassName(item: CalendarItem) {
+  if (item.kind === 'visit') return 'bg-amber-100 text-amber-900';
+  if (item.kind === 'holiday') return 'bg-red-100 text-red-900';
+  return EVENT_COLOR_CLASS[item.color ?? 'sky'];
+}
+
+function calendarItemIcon(kind: CalendarItem['kind']) {
+  if (kind === 'visit') return '🏠';
+  if (kind === 'holiday') return '🇰🇷';
+  return '📅';
+}
+
+function calendarItemLabel(kind: CalendarItem['kind']) {
+  if (kind === 'visit') return '심방';
+  if (kind === 'holiday') return '공휴일';
+  return '일정';
 }

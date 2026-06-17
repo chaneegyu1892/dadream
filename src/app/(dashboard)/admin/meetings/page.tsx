@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NewMeetingButton } from '@/components/new-meeting-button';
 import { Badge } from '@/components/ui/badge';
 
+const MEETINGS_PAGE_LIMIT = 50;
+
 export default async function MeetingsPage() {
   const session = await getSessionProfile();
   if (!session || !roleAtLeast(session.role, 'officer')) redirect('/');
@@ -14,9 +16,11 @@ export default async function MeetingsPage() {
   const { data } = await supabase
     .from('meetings')
     .select('id, title, meeting_date, meeting_items(done)')
-    .order('meeting_date', { ascending: false });
+    .order('meeting_date', { ascending: false })
+    .limit(MEETINGS_PAGE_LIMIT + 1);
 
-  const meetings = data ?? [];
+  const meetings = (data ?? []).slice(0, MEETINGS_PAGE_LIMIT);
+  const reachedMeetingLimit = (data?.length ?? 0) > MEETINGS_PAGE_LIMIT;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -29,6 +33,12 @@ export default async function MeetingsPage() {
         </div>
         <NewMeetingButton />
       </header>
+
+      {reachedMeetingLimit && (
+        <p className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          최근 {MEETINGS_PAGE_LIMIT}개 회의만 표시하고 있어요.
+        </p>
+      )}
 
       {meetings.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">

@@ -29,8 +29,8 @@ export interface CellMemberSummaryInput {
   id: string;
   name: string;
   cell_id: string | null;
+  cell_role?: string | null;
   duty: string | null;
-  is_officer: boolean;
 }
 
 export interface CellSummary {
@@ -38,8 +38,8 @@ export interface CellSummary {
   name: string;
   sortOrder: number;
   memberCount: number;
-  officerCount: number;
   leaderNames: string[];
+  memberNames: string[];
 }
 
 function firstParam(value: SearchParamValue): string | undefined {
@@ -81,8 +81,8 @@ export function buildCellSummaries(
     name: '무소속',
     sortOrder: -1,
     memberCount: 0,
-    officerCount: 0,
     leaderNames: [],
+    memberNames: [],
   });
 
   for (const cell of [...cells].sort(compareCells)) {
@@ -91,8 +91,8 @@ export function buildCellSummaries(
       name: cell.name,
       sortOrder: cell.sort_order,
       memberCount: 0,
-      officerCount: 0,
       leaderNames: [],
+      memberNames: [],
     });
   }
 
@@ -101,8 +101,11 @@ export function buildCellSummaries(
     if (!summary) continue;
 
     summary.memberCount += 1;
-    if (member.is_officer) summary.officerCount += 1;
-    if (isCellLeaderDuty(member.duty)) summary.leaderNames.push(member.name);
+    if (isCellLeader(member)) {
+      summary.leaderNames.push(member.name);
+    } else {
+      summary.memberNames.push(member.name);
+    }
   }
 
   return Array.from(summaries.values());
@@ -113,7 +116,13 @@ function compareCells(a: CellSummaryInput, b: CellSummaryInput): number {
   return a.name.localeCompare(b.name, 'ko-KR', { numeric: true });
 }
 
-function isCellLeaderDuty(duty: string | null): boolean {
+/** 셀리더 판별: 새 cell_role을 우선 쓰고, 없으면 레거시 duty로 폴백한다. */
+function isCellLeader(member: CellMemberSummaryInput): boolean {
+  if (member.cell_role === '셀리더') return true;
+  return isCellLeaderDuty(member.duty);
+}
+
+function isCellLeaderDuty(duty: string | null | undefined): boolean {
   if (!duty) return false;
   return /셀\s*리더|셀장|목자/.test(duty);
 }
@@ -129,12 +138,29 @@ export function getCurrentMonthWindow(now = new Date()): DateWindow {
   };
 }
 
-function toKstDateParts(date: Date): { year: number; month: number } {
+/**
+ * 홈 화면 "다가오는 일정(7일)"용 안정 윈도우.
+ * KST 기준 오늘 0시부터 +7일 끝까지로 잡는다. 같은 KST 날짜 안에서는 항상 같은 값이라
+ * `unstable_cache` keyParts가 하루 단위로만 바뀌어 캐시 적중률이 높다.
+ */
+export function getHomeEventsWindow(now = new Date()): DateWindow {
+  const { year, month, day } = toKstDateParts(now);
+  const dayStart = new Date(Date.UTC(year, month - 1, day));
+  const dayEnd = new Date(Date.UTC(year, month - 1, day + 7));
+
+  return {
+    from: formatKstDateTime(dayStart, false),
+    to: formatKstDateTime(dayEnd, true),
+  };
+}
+
+function toKstDateParts(date: Date): { year: number; month: number; day: number } {
   const kstTime = date.getTime() + KST_OFFSET_MINUTES * 60 * 1000;
   const kstDate = new Date(kstTime);
   return {
     year: kstDate.getUTCFullYear(),
     month: kstDate.getUTCMonth() + 1,
+    day: kstDate.getUTCDate(),
   };
 }
 

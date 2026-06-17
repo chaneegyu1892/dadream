@@ -17,17 +17,22 @@ import {
 
 interface MemberFormProps {
   cells: { id: string; name: string }[];
+  officerPositionOptions: string[];
 }
 
-export function MemberForm({ cells }: MemberFormProps) {
+export function MemberForm({ cells, officerPositionOptions }: MemberFormProps) {
   const router = useRouter();
   const [cellId, setCellId] = useState<string>('none');
+  const [cellRole, setCellRole] = useState<string>('none');
+  const [officerPosition, setOfficerPosition] = useState<string>('none');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function onSubmit(formData: FormData) {
     setError(null);
     if (cellId !== 'none') formData.set('cellId', cellId);
+    formData.set('cellRole', cellRole === 'none' ? '' : cellRole);
+    formData.set('officerPosition', officerPosition === 'none' ? '' : officerPosition);
     startTransition(async () => {
       const photo = formData.get('photo');
       if (photo instanceof File && photo.size > 0) {
@@ -77,9 +82,35 @@ export function MemberForm({ cells }: MemberFormProps) {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="duty">직분</Label>
-        <Input id="duty" name="duty" maxLength={30} placeholder="예: 찬양팀" />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>셀 역할</Label>
+          <Select value={cellRole} onValueChange={setCellRole}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">없음</SelectItem>
+              <SelectItem value="셀리더">셀리더</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>직책</Label>
+          <Select value={officerPosition} onValueChange={setOfficerPosition}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">없음</SelectItem>
+              {officerPositionOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-1.5">
