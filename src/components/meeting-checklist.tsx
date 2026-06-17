@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import {
   addMeetingItem,
   deleteMeetingItem,
@@ -40,11 +41,45 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // 토글·삭제를 즉시 화면에 반영한다(서버 응답 전). 실패하면 자동으로 원래 items로 되돌아간다.
+  type OptimisticAction = { type: 'toggle'; id: string; done: boolean } | { type: 'delete'; id: string };
+  const [optimisticItems, applyOptimistic] = useOptimistic(items, (state, action: OptimisticAction) => {
+    if (action.type === 'delete') return state.filter((i) => i.id !== action.id);
+    return state.map((i) => (i.id === action.id ? { ...i, done: action.done } : i));
+  });
+
   function run(action: () => Promise<{ error?: string }>) {
     setError(null);
     startTransition(async () => {
       const result = await action();
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function toggleItem(item: ChecklistItem, done: boolean) {
+    setError(null);
+    startTransition(async () => {
+      applyOptimistic({ type: 'toggle', id: item.id, done });
+      const result = await toggleMeetingItem({ itemId: item.id, done });
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function removeItem(item: ChecklistItem) {
+    setError(null);
+    startTransition(async () => {
+      applyOptimistic({ type: 'delete', id: item.id });
+      const result = await deleteMeetingItem({ itemId: item.id });
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
     });
   }
 
@@ -65,12 +100,12 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        {items.length === 0 && (
+        {optimisticItems.length === 0 && (
           <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
             아직 항목이 없어요. 아래에서 안건이나 할 일을 추가해보세요.
           </p>
         )}
-        {items.map((item) => (
+        {optimisticItems.map((item) => (
           <div
             key={item.id}
             className="flex items-center gap-3 rounded-lg border px-3 py-2.5"
@@ -78,8 +113,7 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
             <input
               type="checkbox"
               checked={item.done}
-              disabled={isPending}
-              onChange={(e) => run(() => toggleMeetingItem({ itemId: item.id, done: e.target.checked }))}
+              onChange={(e) => toggleItem(item, e.target.checked)}
               className="size-5 shrink-0"
               aria-label={`${item.content} 완료 여부`}
             />
@@ -97,7 +131,7 @@ export function MeetingChecklist({ meetingId, items, officers }: MeetingChecklis
             <button
               onClick={() => {
                 if (!window.confirm(`'${item.content}' 항목을 삭제할까요?`)) return;
-                run(() => deleteMeetingItem({ itemId: item.id }));
+                removeItem(item);
               }}
               disabled={isPending}
               className="-my-2 -mr-2 shrink-0 p-2 text-sm text-muted-foreground hover:text-destructive"

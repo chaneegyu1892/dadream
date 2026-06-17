@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { decideVisit } from '@/app/(dashboard)/visits/actions';
 import { formatSlot, TIME_OF_DAY_LABELS, type PreferredSlot } from '@/lib/visits';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,15 @@ interface VisitActionsProps {
 
 type Mode = 'idle' | 'propose' | 'decline';
 
+const ACTION_SUCCESS: Record<Parameters<typeof decideVisit>[0]['action'], string> = {
+  confirm: '심방을 확정했어요.',
+  propose: '다른 시간을 제안했어요.',
+  decline: '신청을 반려했어요.',
+  accept_proposal: '제안을 수락했어요.',
+  cancel: '신청을 취소했어요.',
+  complete: '완료 처리했어요.',
+};
+
 export function VisitActions({ visitId, status, preferredSlots, viewer }: VisitActionsProps) {
   const [mode, setMode] = useState<Mode>('idle');
   const [slotIndex, setSlotIndex] = useState('0');
@@ -37,8 +47,13 @@ export function VisitActions({ visitId, status, preferredSlots, viewer }: VisitA
     setError(null);
     startTransition(async () => {
       const result = await decideVisit(input);
-      if (result.error) setError(result.error);
-      else setMode('idle');
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else {
+        setMode('idle');
+        toast.success(ACTION_SUCCESS[input.action]);
+      }
     });
   }
 

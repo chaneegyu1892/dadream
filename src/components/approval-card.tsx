@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { approveProfile, rejectProfile } from '@/app/(dashboard)/admin/approvals/actions';
 import { MemberPicker } from '@/components/member-picker';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,12 @@ export function ApprovalCard({ profile, candidates, allUnlinked, cells }: Approv
         newMemberName: memberId === NEW_MEMBER ? newName : undefined,
         newMemberCellId: memberId === NEW_MEMBER ? newCellId : undefined,
       });
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else {
+        toast.success(`${profile.kakaoNickname} 님을 승인했어요.`);
+      }
     });
   }
 
@@ -58,7 +64,12 @@ export function ApprovalCard({ profile, candidates, allUnlinked, cells }: Approv
     setError(null);
     startTransition(async () => {
       const result = await rejectProfile({ profileId: profile.id });
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else {
+        toast.success(`${profile.kakaoNickname} 님의 가입을 거절했어요.`);
+      }
     });
   }
 

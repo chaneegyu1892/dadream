@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { addDays, format, parseISO } from 'date-fns';
 import {
   addServiceRole,
@@ -40,6 +41,18 @@ export function ServiceBoard({
   const weekDate = parseISO(selectedWeek);
   const isThisWeek = selectedWeek === thisWeek;
 
+  // 배정/해제를 즉시 화면에 반영한다(서버 응답 전). 실패하면 자동으로 원래 목록으로 되돌아간다.
+  type OptimisticAction =
+    | { type: 'assign'; id: string; roleId: string; memberName: string }
+    | { type: 'unassign'; id: string };
+  const [optimisticAssignments, applyOptimistic] = useOptimistic(
+    assignments,
+    (state, action: OptimisticAction) => {
+      if (action.type === 'unassign') return state.filter((a) => a.id !== action.id);
+      return [...state, { id: action.id, roleId: action.roleId, memberName: action.memberName }];
+    },
+  );
+
   function moveWeek(deltaDays: number) {
     router.push(`/service?week=${format(addDays(weekDate, deltaDays), 'yyyy-MM-dd')}`);
   }
@@ -48,7 +61,35 @@ export function ServiceBoard({
     setError(null);
     startTransition(async () => {
       const result = await action();
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function assignMember(roleId: string, memberId: string) {
+    const memberName = members.find((m) => m.id === memberId)?.name ?? '';
+    setError(null);
+    startTransition(async () => {
+      applyOptimistic({ type: 'assign', id: `temp-${roleId}-${memberId}`, roleId, memberName });
+      const result = await assignService({ serviceDate: selectedWeek, roleId, memberId });
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function unassignMember(assignmentId: string) {
+    setError(null);
+    startTransition(async () => {
+      applyOptimistic({ type: 'unassign', id: assignmentId });
+      const result = await unassignService({ assignmentId });
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
     });
   }
 
@@ -69,7 +110,7 @@ export function ServiceBoard({
 
       <div className="overflow-hidden rounded-xl border">
         {roles.map((role) => {
-          const assigned = assignments.filter((a) => a.roleId === role.id);
+          const assigned = optimisticAssignments.filter((a) => a.roleId === role.id);
           return (
             <div key={role.id} className="flex items-start justify-between border-b px-4 py-3 last:border-b-0">
               <div className="flex items-center gap-2">
@@ -85,7 +126,7 @@ export function ServiceBoard({
                         <button
                           onClick={() => {
                             if (!window.confirm(`${a.memberName} 님의 ${role.name} 배정을 해제할까요?`)) return;
-                            run(() => unassignService({ assignmentId: a.id }));
+                            unassignMember(a.id);
                           }}
                           disabled={isPending}
                           className="-my-2 -mr-1.5 ml-0.5 p-2 text-muted-foreground hover:text-destructive"
@@ -102,9 +143,7 @@ export function ServiceBoard({
                 <div className="shrink-0">
                   <MemberPicker
                     items={members}
-                    onSelect={(memberId) =>
-                      run(() => assignService({ serviceDate: selectedWeek, roleId: role.id, memberId }))
-                    }
+                    onSelect={(memberId) => assignMember(role.id, memberId)}
                     title={`${role.name} 배정`}
                     trigger={
                       <Button variant="ghost" size="sm" disabled={isPending}>

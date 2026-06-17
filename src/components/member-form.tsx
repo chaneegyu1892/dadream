@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { createMember } from '@/app/(dashboard)/members/new/actions';
 import { compressPhoto } from '@/lib/compress-photo';
 import { Button } from '@/components/ui/button';
@@ -41,8 +42,10 @@ export function MemberForm({ cells, officerPositionOptions }: MemberFormProps) {
       const result = await createMember(formData);
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
         return;
       }
+      toast.success('명부에 등록했어요.');
       router.push('/members');
     });
   }

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Nav } from '@/components/nav';
 import { NotificationBell } from '@/components/notification-bell';
 import { LogoutButton } from '@/components/logout-button';
+import { Toaster } from '@/components/ui/sonner';
 import type { NotificationRow } from '@/types/db';
 
 export default async function DashboardLayout({
@@ -17,6 +18,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
+      <Toaster position="top-center" />
       <Nav role={profile.role} />
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b px-4 py-2 md:justify-end md:px-8">

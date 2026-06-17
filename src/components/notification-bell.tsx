@@ -34,10 +34,13 @@ interface NotificationBellProps {
 
 export function NotificationBell({ notifications, unreadCount, profileId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
+  // 종을 열면 배지를 즉시 0으로 비운다(서버 왕복 대기 없이). 새 알림이 오면 다시 켠다.
+  const [locallyRead, setLocallyRead] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();
+  const showUnread = locallyRead ? 0 : unreadCount;
 
-  // 새 알림이 들어오면 서버 컴포넌트를 갱신해 종 배지를 즉시 반영한다.
+  // 새 알림이 들어오면 로컬 읽음 표시를 해제하고 서버 컴포넌트를 갱신해 배지를 다시 띄운다.
   useEffect(() => {
     if (!profileId) return;
     const supabase = createClient();
@@ -51,7 +54,10 @@ export function NotificationBell({ notifications, unreadCount, profileId }: Noti
           table: 'notifications',
           filter: `profile_id=eq.${profileId}`,
         },
-        () => router.refresh(),
+        () => {
+          setLocallyRead(false);
+          router.refresh();
+        },
       )
       .subscribe();
 
@@ -62,7 +68,8 @@ export function NotificationBell({ notifications, unreadCount, profileId }: Noti
 
   function onOpenChange(next: boolean) {
     setOpen(next);
-    if (next && unreadCount > 0) {
+    if (next && showUnread > 0) {
+      setLocallyRead(true); // 배지 즉시 비우기
       startTransition(async () => {
         await markAllNotificationsRead();
       });
@@ -74,9 +81,9 @@ export function NotificationBell({ notifications, unreadCount, profileId }: Noti
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="relative" aria-label="알림">
           <span aria-hidden="true">🔔</span>
-          {unreadCount > 0 && (
+          {showUnread > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {showUnread > 9 ? '9+' : showUnread}
             </span>
           )}
         </Button>
@@ -94,7 +101,7 @@ export function NotificationBell({ notifications, unreadCount, profileId }: Noti
                 <div
                   className={cn(
                     'rounded-lg px-3 py-2.5 text-sm',
-                    n.readAt ? 'text-muted-foreground' : 'bg-accent font-medium',
+                    n.readAt || locallyRead ? 'text-muted-foreground' : 'bg-accent font-medium',
                   )}
                 >
                   <p>{n.title}</p>
