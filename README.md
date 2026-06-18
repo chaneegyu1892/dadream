@@ -1,104 +1,160 @@
-# 다드림 — 제자광성교회 청년부 대시보드
+# 다드림 (dadream)
 
-청년부 명부·심방·예배위원·임원회의를 한곳에서 관리하는 PWA 대시보드입니다.
-모바일에서 홈 화면에 설치해 앱처럼 쓸 수 있습니다.
+> 제자광성교회 청년부 대시보드. 카카오 OAuth + 임원 승인제 + RLS-퍼스트 비공개 그룹웨어.
 
-## 기술 스택
+## 한 줄 요약
 
-- **Next.js 16** (App Router, React Server Components) + **React 19**
-- **Supabase** — Postgres + Auth(카카오 OAuth) + Storage + Realtime, RLS로 권한 강제
-- **Tailwind CSS 4** + Radix UI(shadcn 스타일 컴포넌트)
-- **Zod** 입력 검증 · **date-fns** 날짜 처리
-- **Vitest** 단위 테스트 · **Vercel**(icn1) 배포
+Next.js 16 App Router + React 19 + Supabase (Postgres + Auth Kakao + Storage) + Tailwind 4 + Radix UI. PWA 기반(서비스워커 도입 전).
 
-## 권한 모델
-
-역할은 4단계이며 DB의 RLS 정책과 `src/lib/roles.ts`가 함께 강제합니다.
-
-| 역할 | 설명 | 주요 권한 |
-| --- | --- | --- |
-| `member` (청년) | 일반 청년 | 명부 열람(기본 정보), 본인 심방 신청 |
-| `officer` (임원) | 셀 임원 | 명부 편집, 연락처 열람, 관리 메뉴 |
-| `staff` (부장·부감) | 부서 운영진 | 전체 심방 현황, 개인정보 열람 |
-| `pastor` (목사님) | 교역자 | 심방 확정, 목양 메모 |
-
-가입 후에는 `pending` 상태이며, 임원 이상이 승인해야 대시보드에 접근할 수 있습니다.
-
-## 로컬 개발
+## 빠른 시작
 
 ```bash
+# 1) 의존성
 npm install
-npm run dev        # http://localhost:3000
+
+# 2) 환경변수
+cp .env.example .env.local
+# .env.local에 Supabase URL/anon key 채우기 (대시보드 Settings → API)
+
+# 3) 개발 서버
+npm run dev
+# → http://localhost:3000
 ```
 
-### 환경변수 (`.env.local`)
+### Supabase DB 작업
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=...        # Supabase 프로젝트 URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...   # publishable(anon) 키
+# 한 번만: 프로젝트 연결
+cp .env.example .env.local
+# .env.local에 SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN 채우기
+npm run db:link
+
+# 이후
+npm run db:status   # 원격/로컬 마이그레이션 상태
+npm run db:push     # 로컬 마이그 → 원격
+npm run db:pull     # 원격 → 로컬
+npm run db:diff     # 스키마 차이
+npm run db:types    # src/types/supabase.gen.ts 재생성
 ```
 
-검증 로직은 `src/lib/supabase/env.ts`에 있으며, 누락 시 시작 단계에서 실패합니다.
+> `scripts/db.sh`가 `.env.local`을 자동 로드하고 60초 timeout을 강제한다.
+> 자세한 규약은 [AGENTS.md](./AGENTS.md) 참고.
 
-### 스크립트
+## 핵심 컨셉
+
+### 권한의 진실 공급원은 DB
+
+- **RLS** (`supabase/migrations/0002_rls.sql`) — 모든 테이블에 row-level security
+- **트리거** (`0016`, `0017`) — role/approval 변경 시 privilege escalation 방지
+- `src/lib/roles.ts`는 **UI 보조용**(보이기/숨기기)일 뿐. 권한 체크는 무조건 DB.
+
+### 4단계 역할
+
+`member` (0) → `officer` (1) → `staff` (2) → `pastor` (3).
+`role_at_least(min)` / `role_rank()`로 비교 (`src/lib/roles.ts`).
+
+### 데이터 분리
+
+| 테이블 | 누가 보나 | 내용 |
+|---|---|---|
+| `members` | 모든 인증 사용자 | 이름, 사진경로, 셀, 직분, 활성 여부 |
+| `member_private` | staff+ 또는 본인 | 주소, 직장, 가족 |
+| `member_contact` | officer+ 또는 본인 | 전화, 생일, 세례 |
+| `member_duty` | officer+ | 직분 텍스트 (legacy) |
+| `visit_notes` | pastor | 목양 메모 |
+
+사진은 비공개 버킷 + 12시간 signed URL 캐시 (`src/lib/photos.ts`).
+
+### 캐시
+
+- `unstable_cache` (Next 16 표준 `'use cache'`/`cacheTag`는 마이그레이션 전)
+- `STABLE_CACHE_SECONDS` = **30분** (권한 변경 반영 시간)
+- keyParts는 **고정 prefix만** (Next 16 unstable_cache는 함수 인자를 invocationKey에 자동 포함)
+- 무효화는 `src/lib/dashboard-cache-invalidation.ts`의 `revalidate*()` 헬퍼 사용
+
+### 인증
+
+- **카카오 OAuth** + 임원 승인제
+- 가입 시 `pending` 자동 생성, 임원 승인 전까지 대시보드 진입 불가
+- 콜백 redirect origin은 **화이트리스트** (`src/lib/auth-redirect.ts`)
+- 환경변수 `NEXT_PUBLIC_SITE_URL` (프로덕션 필수, dev는 localhost fallback)
+
+## 마이그레이션 표
+
+`supabase/migrations/` 누적 적용. 번호 순서대로 실행.
+
+| # | 파일 | 내용 |
+|---|---|---|
+| 0001 | schema | 기본 스키마 (user_role, approval_status, visit_status enum, profiles/events/visits 등) |
+| 0002 | rls | RLS 헬퍼(current_app_role, role_rank, role_at_least, my_member_id) + 정책 |
+| 0003 | security_hardening | 보안 헤더, 시크릿 정리 |
+| 0004 | storage | Supabase Storage 정책 (member-photos 비공개 버킷) |
+| 0005 | tiered_columns_and_notify | member_private/contact 분리 + push_notification/notify_pastors RPC |
+| 0006 | member_gender_registered | 명부 성별/등록일 컬럼 |
+| 0007 | phase2 | 심방/방문 노트 확장 |
+| 0008 | performance_indexes | 검색/조회 인덱스 |
+| 0009 | transactional_rpcs | approve_profile_tx / add_meeting_item_tx / add_service_role_tx |
+| 0010 | event_colors | 일정 색상 |
+| 0011 | self_profile_edit | 본인 프로필 편집 |
+| 0012 | consolidate_self_profile_policies | 0011 정책 정리 |
+| 0013 | member_duties | 명부 직분 |
+| 0014 | consolidate_member_duty_policies | 0013 정책 정리 |
+| 0015 | split_member_roles | members.duty → cell_role + officer_position 분리 (duty는 레거시 보존) |
+| 0016 | profiles_privilege_escalation_guard | profiles.role/approval 변경 가드 트리거 |
+| 0017 | approve_profile_tx_self_guard | approve_profile_tx self-approval + role hierarchy 검증 |
+
+> 이전에 원격 DB에 timestamp 마이그(20260610…) 14개가 별도로 적용돼 있다.
+> `supabase db pull`로 이력 정렬 가능. SQL 파일 자체는 위 표가 진실.
+
+## 빌드 / 테스트
 
 ```bash
-npm run dev     # 개발 서버
-npm run build   # 프로덕션 빌드
-npm run start   # 빌드 결과 실행
-npm run lint    # ESLint
-npm run test    # Vitest 단위 테스트
+npm run lint          # eslint
+npm run test          # vitest (21 파일, 100+ 테스트)
+npm run build         # Next 16 빌드
+npm run test:e2e      # Playwright (먼저 npm run test:e2e:install)
 ```
 
-## 데이터베이스 (Supabase)
+### 빌드 게이트
 
-마이그레이션은 `supabase/migrations/`에 순서대로 들어 있습니다.
+- `npm run lint` 0 errors
+- `npm run test` 100+ tests pass
+- `npm run build` 성공
 
-| 파일 | 내용 |
-| --- | --- |
-| `0001_schema.sql` | 기본 스키마(cells/members/profiles/visit_requests/notifications 등) + 가입 트리거 |
-| `0002_rls.sql` | RLS 헬퍼 함수(`role_at_least` 등)와 테이블별 정책 |
-| `0003_security_hardening.sql` | 함수 `search_path` 고정, 트리거 함수 EXECUTE 회수 |
-| `0004_storage.sql` | 명부 사진 Storage 버킷·정책 |
-| `0005_tiered_columns_and_notify.sql` | 연락처 분리 테이블 + 알림 발송 SECURITY DEFINER 함수 |
-| `0006_member_gender_registered.sql` | 명부 컬럼 보강 |
-| `0007_phase2.sql` | 결혼 예정·임원회의·예배위원 테이블 + RLS |
-| `0008_performance_indexes.sql` | 화면 쿼리 패턴에 맞춘 인덱스 |
-| `0009_transactional_rpcs.sql` | 다단계 쓰기를 묶는 트랜잭션 RPC(승인·회의항목·직책) |
-| `0010_realtime_notifications.sql` | 알림 테이블 Realtime 퍼블리케이션 등록 |
-
-CLI로 적용:
-
-```bash
-supabase db push
-```
-
-## PWA
-
-- `src/app/manifest.ts` — 앱 매니페스트(아이콘·테마·standalone)
-- `public/sw.js` — 서비스워커(오프라인 안내 화면, 정적 자산 캐싱)
-- `src/components/service-worker-register.tsx` — 프로덕션에서 SW 등록
-
-> 서비스워커는 `NODE_ENV=production`에서만 등록되므로, 오프라인 동작은 `npm run build && npm run start` 또는 배포 환경에서 확인하세요.
-
-## 보안
-
-- 모든 테이블은 RLS로 보호되며, 권한 판정은 `role_at_least()` 헬퍼 기준입니다.
-- 다단계 쓰기는 트랜잭션 RPC로 원자성을 보장합니다(고아 레코드 방지).
-- HTTP 응답 보안 헤더는 `next.config.ts`에서 설정합니다(클릭재킹·MIME 스니핑 차단, HSTS).
-- 명부 사진은 서명 URL로만 접근하며 `src/lib/photos.ts`가 캐싱·갱신을 처리합니다.
-
-## 디렉터리 개요
+## 디렉토리
 
 ```
 src/
   app/
-    (dashboard)/      # 인증·승인 가드가 걸린 메인 영역
-      admin/          # officer+ 전용 관리(승인·회의·결혼)
-    login, pending, auth/callback
-  components/         # UI 및 화면 컴포넌트
-  lib/                # 도메인 로직(roles, visits, photos, supabase 등)
-  types/              # DB·Supabase 타입
-supabase/migrations/  # DB 스키마·RLS·RPC
-tests/                # Vitest 단위 테스트
+    (dashboard)/    # 로그인 후 화면 (라우트 그룹, layout에서 세션 검증)
+    auth/callback/  # OAuth 콜백
+    offline/      # 오프라인 안내 (PWA navigate fallback)
+  components/       # 재사용 UI
+  lib/              # 도메인 로직 (auth, roles, dashboard-query, photos, …)
+  types/            # Database 타입 (수동 or npm run db:types)
+supabase/
+  migrations/       # 누적 SQL (0001..0017.sql)
+  config.toml       # Supabase CLI 설정
+scripts/
+  db.sh             # .env.local 자동 로드 + db:* 진입점
+e2e/                # Playwright 시나리오
+public/
+  offline.html    # 정적 오프라인 fallback
 ```
+
+## 환경변수
+
+| 이름 | 용도 | 필수 |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL | O |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon JWT | O |
+| `NEXT_PUBLIC_SITE_URL` | OAuth 콜백 redirect origin 화이트리스트 | O (prod) |
+| `SUPABASE_PROJECT_REF` | Supabase CLI 프로젝트 ref (DB 작업 시) | dev 선택 |
+| `SUPABASE_ACCESS_TOKEN` | Supabase CLI access token (DB 작업 시) | dev 선택 |
+
+`.env.local`은 `.gitignore` 처리됨. 토큰 회전: [Supabase 대시보드](https://app.supabase.com/account/tokens).
+
+## 더 보기
+
+- [AGENTS.md](./AGENTS.md) — 에이전트/AI 협업 규칙 (Next 16 주의, RLS 진실 공급원, 캐시 정책, DB 작업 규약)
+- [다드림 GitHub](https://github.com/chaneegyu1892/dadream)
