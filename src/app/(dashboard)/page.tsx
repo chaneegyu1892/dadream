@@ -46,11 +46,11 @@ export default async function HomePage() {
       </div>
 
       <Suspense fallback={<HomeCardFallback title="예배위원" lines={2} />}>
-        <ServiceSummaryCard userId={profile.userId} />
+        <ServiceSummaryCard userId={profile.userId} role={profile.role} />
       </Suspense>
 
       <Suspense fallback={<HomeCardFallback title="다가오는 일정 (7일)" lines={3} />}>
-        <UpcomingEventsCard userId={profile.userId} />
+        <UpcomingEventsCard userId={profile.userId} role={profile.role} />
       </Suspense>
 
       <Suspense fallback={<HomeCardFallback title={visitCardTitle(profile.role)} lines={3} />}>
@@ -75,13 +75,13 @@ function HomeCardFallback({ title, lines }: { title: string; lines: number }) {
   );
 }
 
-async function ServiceSummaryCard({ userId }: { userId: string }) {
+async function ServiceSummaryCard({ userId, role }: { userId: string; role: UserRole }) {
   const now = new Date();
   const thisWeek = sundayOf(now);
   const nextWeek = sundayOf(now, 1);
   const accessToken = await getDashboardAccessToken();
   const services = accessToken
-    ? await getCachedHomeService(userId, accessToken, thisWeek, nextWeek).catch((error) => {
+    ? await getCachedHomeService(userId, role, accessToken, thisWeek, nextWeek).catch((error) => {
         console.error('[HomePage] cached service 조회 실패, live 조회로 폴백:', error);
         return fetchHomeServiceLive(thisWeek, nextWeek);
       })
@@ -109,12 +109,12 @@ async function ServiceSummaryCard({ userId }: { userId: string }) {
   );
 }
 
-async function UpcomingEventsCard({ userId }: { userId: string }) {
+async function UpcomingEventsCard({ userId, role }: { userId: string; role: UserRole }) {
   const now = new Date();
   const window = getHomeEventsWindow(now);
   const accessToken = await getDashboardAccessToken();
   const events = accessToken
-    ? await getCachedHomeEvents(userId, accessToken, window).catch((error) => {
+    ? await getCachedHomeEvents(userId, role, accessToken, window).catch((error) => {
         console.error('[HomePage] cached events 조회 실패, live 조회로 폴백:', error);
         return fetchHomeEventsLive(window);
       })

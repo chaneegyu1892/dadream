@@ -68,7 +68,7 @@ export default async function VisitsPage() {
   // 캘린더 표시용(일정 + 확정 심방)은 짧게 캐시하고, 진행/지난 심방은 항상 라이브로 조회한다.
   const [calendarDisplay, activeVisitsRes, pastVisitsRes] = await Promise.all([
     accessToken
-      ? getCachedCalendarDisplay(session.userId, accessToken, calendarWindow).catch((error) => {
+      ? getCachedCalendarDisplay(session.userId, session.role, accessToken, calendarWindow).catch((error) => {
           console.error('[VisitsPage] cached calendar 조회 실패, live 조회로 폴백:', error);
           return fetchCalendarDisplayLive(supabase, calendarFrom, calendarTo);
         })

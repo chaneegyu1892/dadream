@@ -18,8 +18,12 @@ export const DASHBOARD_CACHE_TAGS = {
 
 export type DashboardCacheTag = (typeof DASHBOARD_CACHE_TAGS)[keyof typeof DASHBOARD_CACHE_TAGS];
 
-/** 명부/셀처럼 거의 바뀌지 않는 데이터는 길게 캐시한다. */
-export const STABLE_CACHE_SECONDS = 12 * 60 * 60;
+/**
+ * 명부/셀처럼 자주 바뀌지 않는 데이터도 권한 변경(member→officer 등) 반영을 위해
+ * 30분으로 단축. 길게 잡으면 같은 사용자가 officer로 승진해도 캐시가 만료될 때까지
+ * 이전 권한으로 보거나, 다른 세션의 캐시 결과가 노출될 수 있다.
+ */
+export const STABLE_CACHE_SECONDS = 30 * 60;
 /** 캘린더는 심방 확정 등으로 더 자주 바뀌므로 짧게 캐시한다. */
 export const CALENDAR_CACHE_SECONDS = 2 * 60 * 60;
 /**

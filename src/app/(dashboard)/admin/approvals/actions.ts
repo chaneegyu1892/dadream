@@ -59,11 +59,11 @@ export async function approveProfile(input: ApproveInput): Promise<{ error?: str
     console.error('[approveProfile] push_notification 실패:', notifyError.message);
   }
 
-  if (parsed.data.newMemberName) {
-    revalidateMemberCaches();
-    revalidatePath('/members');
-  }
+  // 역할/승인 상태가 바뀌었으므로 명부/셀/홈 멤버 관련 캐시를 모두 무효화한다.
+  // 새 명부 추가가 아니어도(기존 member 연결 케이스) role 변화로 RLS 결과가 달라질 수 있다.
+  revalidateMemberCaches();
   revalidatePath('/admin/approvals');
+  revalidatePath('/members');
   return {};
 }
 

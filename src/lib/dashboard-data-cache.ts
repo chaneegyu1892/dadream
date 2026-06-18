@@ -8,6 +8,7 @@ import {
   STABLE_CACHE_SECONDS,
 } from '@/lib/dashboard-cache-tags';
 import type { DateWindow } from '@/lib/dashboard-query';
+import type { UserRole } from '@/lib/roles';
 import { getSupabaseEnv } from '@/lib/supabase/env';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import type { CellRow, EventRow, MemberRow, VisitRow } from '@/types/db';
@@ -64,11 +65,12 @@ export async function getDashboardAccessToken(): Promise<string | null> {
 }
 
 /**
- * `/members` 기본 개요용: 셀 목록 + 활동 청년 요약. 거의 안 바뀌므로 길게 캐시한다.
- * 사용자별(userId)로 캐시해 RLS 결과가 사용자 간에 섞이지 않게 한다. access token은 keyParts에서 제외.
+ * `/members` 기본 개요용: 셀 목록 + 활동 청년 요약. 사용자별(userId, role)로 캐시해
+ * RLS 결과가 사용자/역할 간에 섞이지 않게 한다. access token은 keyParts에서 제외.
  */
 export function getCachedMembersOverview(
   userId: string,
+  role: UserRole,
   accessToken: string,
 ): Promise<MembersOverviewData> {
   return unstable_cache(
@@ -91,16 +93,23 @@ export function getCachedMembersOverview(
         members: (membersRes.data ?? []) as MemberSummaryRow[],
       };
     },
-    ['dashboard-members-overview', userId],
+    // keyParts는 모듈 스코프에서 박히는 고정 prefix만 둔다.
+    // userId/role/accessToken은 함수 인자(→ invocationKey)에 자동 포함되므로
+    // 여기 다시 넣지 않는다. (Next 16 unstable_cache 동작)
+    ['dashboard-members-overview'],
     { tags: [DASHBOARD_CACHE_TAGS.members], revalidate: STABLE_CACHE_SECONDS },
   )();
 }
 
 /**
- * 멤버 검색/필터 화면의 셀 드롭다운용 셀 목록. 길게 캐시한다.
+ * 멤버 검색/필터 화면의 셀 드롭다운용 셀 목록. 사용자별(userId, role)로 캐시.
  * (필터된 실제 멤버 목록은 캐시하지 않고 라이브로 조회한다.)
  */
-export function getCachedCells(userId: string, accessToken: string): Promise<CellRow[]> {
+export function getCachedCells(
+  userId: string,
+  role: UserRole,
+  accessToken: string,
+): Promise<CellRow[]> {
   return unstable_cache(
     async () => {
       const supabase = createAuthedClient(accessToken);
@@ -112,7 +121,7 @@ export function getCachedCells(userId: string, accessToken: string): Promise<Cel
       if (error) throw new Error(`셀 목록 조회 실패: ${error.message}`);
       return (data ?? []) as CellRow[];
     },
-    ['dashboard-cells', userId],
+    ['dashboard-cells'],
     { tags: [DASHBOARD_CACHE_TAGS.cells], revalidate: STABLE_CACHE_SECONDS },
   )();
 }
@@ -124,6 +133,7 @@ export function getCachedCells(userId: string, accessToken: string): Promise<Cel
  */
 export function getCachedCalendarDisplay(
   userId: string,
+  role: UserRole,
   accessToken: string,
   window: DateWindow,
 ): Promise<CalendarDisplayData> {
@@ -157,7 +167,7 @@ export function getCachedCalendarDisplay(
         visits: (visitsRes.data ?? []) as unknown as CalendarVisitRow[],
       };
     },
-    ['dashboard-calendar', userId, from, to],
+    ['dashboard-calendar', from, to],
     { tags: [DASHBOARD_CACHE_TAGS.calendar], revalidate: CALENDAR_CACHE_SECONDS },
   )();
 }
@@ -170,6 +180,7 @@ export function getCachedCalendarDisplay(
  */
 export function getCachedHomeEvents(
   userId: string,
+  role: UserRole,
   accessToken: string,
   window: DateWindow,
 ): Promise<EventRow[]> {
@@ -188,7 +199,7 @@ export function getCachedHomeEvents(
       if (error) throw new Error(`다가오는 일정 조회 실패: ${error.message}`);
       return (data ?? []) as EventRow[];
     },
-    ['dashboard-home-events', userId, from, to],
+    ['dashboard-home-events', from, to],
     { tags: [DASHBOARD_CACHE_TAGS.homeEvents], revalidate: HOME_EVENTS_CACHE_SECONDS },
   )();
 }
@@ -199,6 +210,7 @@ export function getCachedHomeEvents(
  */
 export function getCachedHomeService(
   userId: string,
+  role: UserRole,
   accessToken: string,
   thisWeek: string,
   nextWeek: string,
@@ -214,7 +226,7 @@ export function getCachedHomeService(
       if (error) throw new Error(`예배위원 배정 조회 실패: ${error.message}`);
       return (data ?? []) as unknown as HomeServiceRow[];
     },
-    ['dashboard-home-service', userId, thisWeek, nextWeek],
+    ['dashboard-home-service', thisWeek, nextWeek],
     { tags: [DASHBOARD_CACHE_TAGS.homeService], revalidate: HOME_SERVICE_CACHE_SECONDS },
   )();
 }

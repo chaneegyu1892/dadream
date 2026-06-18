@@ -51,7 +51,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
     };
 
     if (session && accessToken) {
-      const overview = await getCachedMembersOverview(session.userId, accessToken).catch((error) => {
+      const overview = await getCachedMembersOverview(session.userId, session.role, accessToken).catch((error) => {
         console.error('[MembersPage] cached overview 조회 실패, live 조회로 폴백:', error);
         return fetchOverviewLive();
       });
@@ -103,7 +103,7 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
   const [membersRes, cells] = await Promise.all([
     membersQuery,
     session && accessToken
-      ? getCachedCells(session.userId, accessToken).catch((error) => {
+      ? getCachedCells(session.userId, session.role, accessToken).catch((error) => {
           console.error('[MembersPage] cached cells 조회 실패, live 조회로 폴백:', error);
           return supabase
             .from('cells')
