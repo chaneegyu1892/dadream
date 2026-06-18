@@ -102,6 +102,7 @@ npm run db:types    # src/types/supabase.gen.ts 재생성
 | 0015 | split_member_roles | members.duty → cell_role + officer_position 분리 (duty는 레거시 보존) |
 | 0016 | profiles_privilege_escalation_guard | profiles.role/approval 변경 가드 트리거 |
 | 0017 | approve_profile_tx_self_guard | approve_profile_tx self-approval + role hierarchy 검증 |
+| 0018 | members_cell_role_guard | members.cell_role/officer_position 변경 가드 트리거 |
 
 > 이전에 원격 DB에 timestamp 마이그(20260610…) 14개가 별도로 적용돼 있다.
 > `supabase db pull`로 이력 정렬 가능. SQL 파일 자체는 위 표가 진실.

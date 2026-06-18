@@ -108,6 +108,7 @@ npm run db:types  # src/types/supabase.gen.ts 재생성
 | 0015 | split_member_roles | members.duty → cell_role + officer_position 분리 (duty는 레거시 보존) |
 | 0016 | profiles_privilege_escalation_guard | profiles.role/approval 변경 가드 트리거 |
 | 0017 | approve_profile_tx_self_guard | approve_profile_tx self-approval + role hierarchy 검증 |
+| 0018 | members_cell_role_guard | members.cell_role/officer_position 변경 가드 트리거 |
 
 ## 캐시/오프라인 (향후 PWA 도입 시)
 - 본 코드베이스는 아직 `public/sw.js` / `manifest.webmanifest`가 없음. PWA 도입 시:
