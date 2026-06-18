@@ -17,10 +17,16 @@ function LoginContent() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
+    // NEXT_PUBLIC_SITE_URL이 설정돼 있으면 그 origin을, 없으면 window.location.origin 사용.
+    // 단, 화이트리스트 검사는 /auth/callback에서 한 번 더 수행한다.
+    const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SITE_URL).origin
+      : null;
+    const redirectOrigin = configuredOrigin ?? window.location.origin;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${redirectOrigin}/auth/callback`,
       },
     });
     if (oauthError) {
