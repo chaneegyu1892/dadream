@@ -8,6 +8,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# 모든 CLI 호출은 timeout을 강제 (네트워크/DB hang 방지).
+# 기본 60초. CI나 느린 환경에서 늘리려면 DB_TIMEOUT=120 npm run db:push
+DB_TIMEOUT="${DB_TIMEOUT:-60}"
+sb() {
+  timeout "$DB_TIMEOUT" npx supabase "$@"
+}
+
 # .env.local 자동 로드. 없으면 안내.
 if [ -f .env.local ]; then
   set -a
@@ -26,11 +33,11 @@ if [ -z "${SUPABASE_PROJECT_REF:-}" ] || [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; th
   exit 1
 fi
 
-# Supabase CLI는 자기 디렉토리에 .supabase/ 또는 supabase/.temp/ 캐시를 두므로
-# 명령별로 재실행해도 안전. link는 한 번만.
+# Supabase CLI는 자기 디렉토리에 supabase/.temp/project-ref 캐시를 두므로
+# link는 한 번만. 이후 모든 명령은 캐시된 연결 사용.
 ensure_link() {
   if [ ! -f supabase/.temp/project-ref ]; then
-    npx supabase link --project-ref "$SUPABASE_PROJECT_REF" >/dev/null
+    sb link --project-ref "$SUPABASE_PROJECT_REF" >/dev/null
   fi
 }
 
@@ -39,32 +46,32 @@ shift || true
 
 case "$cmd" in
   link)
-    npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+    sb link --project-ref "$SUPABASE_PROJECT_REF"
     ;;
   status)
     ensure_link
-    npx supabase migration list
+    sb migration list
     ;;
   diff)
     ensure_link
-    npx supabase db diff "$@"
+    sb db diff "$@"
     ;;
   push)
     ensure_link
-    npx supabase db push "$@"
+    sb db push "$@"
     ;;
   pull)
     ensure_link
-    npx supabase db pull "$@"
+    sb db pull "$@"
     ;;
   types)
     ensure_link
-    npx supabase gen types typescript --linked > src/types/supabase.gen.ts
+    sb gen types typescript --linked > src/types/supabase.gen.ts
     echo "✓ src/types/supabase.gen.ts 갱신"
     ;;
   reset)
     ensure_link
-    npx supabase db reset "$@"
+    sb db reset "$@"
     ;;
   help|--help|-h)
     cat <<EOF
@@ -83,6 +90,9 @@ case "$cmd" in
   SUPABASE_PROJECT_REF
   SUPABASE_ACCESS_TOKEN
   (NEXT_PUBLIC_SITE_URL 등 다른 변수도 자동 로드됨)
+
+옵션:
+  DB_TIMEOUT=<초>  CLI 호출당 timeout (기본 60). hang 방지.
 EOF
     ;;
   *)
