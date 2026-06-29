@@ -1,5 +1,5 @@
-import { DadreamLoading } from '@/components/dadream-loading';
+import { MembersPageSkeleton } from '@/components/page-skeletons';
 
 export default function MembersLoading() {
-  return <DadreamLoading />;
+  return <MembersPageSkeleton />;
 }

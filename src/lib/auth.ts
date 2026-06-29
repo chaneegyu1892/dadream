@@ -13,16 +13,19 @@ export type SessionProfile = {
 /** 로그인한 사용자의 프로필을 조회한다. 미로그인이면 null. 같은 서버 렌더 요청 안에서는 중복 조회를 줄인다. */
 export const getSessionProfile = cache(async (): Promise<SessionProfile | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims(): 비대칭 JWT 서명키면 로컬 서명검증으로 Auth 서버 왕복 없이 신원을 확인한다.
+  // (대칭 키면 내부적으로 getUser로 검증하므로 기존과 동일하게 안전하다.)
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
 
-  if (!user) return null;
+  if (claimsError || !claimsData?.claims) return null;
+
+  const userId = claimsData.claims.sub;
+  if (!userId) return null;
 
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role, approval, member_id, kakao_nickname')
-    .eq('id', user.id)
+    .eq('id', userId)
     .maybeSingle();
 
   if (error) {
@@ -34,7 +37,7 @@ export const getSessionProfile = cache(async (): Promise<SessionProfile | null> 
   if (!profile) {
     // 트리거가 프로필을 만들기 전 — 승인 대기로 취급
     return {
-      userId: user.id,
+      userId,
       role: 'member',
       approval: 'pending',
       memberId: null,
@@ -43,7 +46,7 @@ export const getSessionProfile = cache(async (): Promise<SessionProfile | null> 
   }
 
   return {
-    userId: user.id,
+    userId,
     role: profile.role,
     approval: profile.approval,
     memberId: profile.member_id,

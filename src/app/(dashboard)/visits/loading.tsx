@@ -1,5 +1,5 @@
-import { DadreamLoading } from '@/components/dadream-loading';
+import { VisitsPageSkeleton } from '@/components/page-skeletons';
 
 export default function VisitsLoading() {
-  return <DadreamLoading />;
+  return <VisitsPageSkeleton />;
 }

@@ -1,5 +1,5 @@
-import { DadreamLoading } from '@/components/dadream-loading';
+import { AdminPageSkeleton } from '@/components/page-skeletons';
 
 export default function AdminLoading() {
-  return <DadreamLoading />;
+  return <AdminPageSkeleton />;
 }

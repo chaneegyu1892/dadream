@@ -1,5 +1,5 @@
-import { DadreamLoading } from '@/components/dadream-loading';
+import { FormPageSkeleton } from '@/components/page-skeletons';
 
 export default function MeetingLoading() {
-  return <DadreamLoading />;
+  return <FormPageSkeleton />;
 }

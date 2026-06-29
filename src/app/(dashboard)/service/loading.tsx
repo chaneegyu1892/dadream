@@ -1,5 +1,5 @@
-import { DadreamLoading } from '@/components/dadream-loading';
+import { ServicePageSkeleton } from '@/components/page-skeletons';
 
 export default function ServiceLoading() {
-  return <DadreamLoading />;
+  return <ServicePageSkeleton />;
 }

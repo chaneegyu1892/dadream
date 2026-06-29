@@ -42,3 +42,6 @@ next-env.d.ts
 .hermes/
 .claude/settings.json
 test-results/
+
+# gjc agent runtime state
+/.gjc/

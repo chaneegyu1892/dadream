@@ -32,3 +32,12 @@ describe('next.config 보안 헤더', () => {
     expect(headers.get('Permissions-Policy')).toContain('geolocation=()');
   });
 });
+
+describe('next.config 클라이언트 캐시(staleTimes)', () => {
+  it('동적·정적 라우터 캐시 보존 시간을 설정한다', () => {
+    expect(nextConfig.experimental?.staleTimes).toEqual({
+      dynamic: 30,
+      static: 180,
+    });
+  });
+});

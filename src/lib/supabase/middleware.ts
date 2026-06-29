@@ -34,12 +34,12 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getUser()는 세션 토큰을 검증·갱신하므로 반드시 호출해야 한다.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims()는 세션 토큰을 검증·갱신한다. 비대칭 JWT 서명키를 쓰면 Auth 서버 왕복 없이
+  // 로컬에서 서명만 검증하고(대칭 키면 내부적으로 getUser로 폴백 — 기존과 동일하게 안전),
+  // getSession을 거치므로 만료 임박 토큰은 그대로 갱신된다.
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user) {
+  if (!data?.claims) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

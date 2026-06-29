@@ -22,6 +22,18 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * 클라이언트 라우터 캐시 보존 시간(초).
+   * 동적(인증) 라우트는 prefetch가 데이터까지 못 받아 탭을 옮길 때마다 서버를 왕복하고
+   * loading 화면이 매번 떴다. dynamic 캐시를 30초 두면 최근 방문한 탭으로의 재이동은
+   * 서버 왕복·로딩 화면 없이 즉시 전환된다(변경은 서버액션의 revalidate로 즉시 무효화됨).
+   */
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   async headers() {
     return [
       {

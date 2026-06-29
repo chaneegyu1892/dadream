@@ -60,34 +60,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@layer utilities {
-  @keyframes dadream-logo-focus {
-    0%,
-    100% {
-      opacity: 0.38;
-      filter: blur(1.5px) saturate(0.9);
-      transform: scale(0.96);
-    }
-    45%,
-    55% {
-      opacity: 1;
-      filter: blur(0) saturate(1.08);
-      transform: scale(1.02);
-    }
-  }
-
-  .dadream-loading-logo {
-    animation: dadream-logo-focus 1.8s ease-in-out infinite;
-    transform-origin: center;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .dadream-loading-logo {
-      animation: none;
-      opacity: 1;
-      filter: none;
-      transform: none;
-    }
-  }
-}
