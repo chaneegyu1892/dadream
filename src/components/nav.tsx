@@ -38,6 +38,7 @@ export function Nav({ role }: { role: UserRole }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch
             className={cn(
               'flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs',
               isActive(item.href) ? 'font-semibold text-foreground' : 'text-muted-foreground',
@@ -61,6 +62,7 @@ export function Nav({ role }: { role: UserRole }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                   isActive(item.href)

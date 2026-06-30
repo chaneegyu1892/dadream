@@ -35,13 +35,13 @@ export default async function HomePage() {
 
       <div className="flex gap-2">
         <Button asChild className="flex-1">
-          <Link href="/visits/new">심방 신청하기</Link>
+          <Link href="/visits/new" prefetch>심방 신청하기</Link>
         </Button>
         <Button asChild variant="outline" className="flex-1">
-          <Link href="/members">명부 보기</Link>
+          <Link href="/members" prefetch>명부 보기</Link>
         </Button>
         <Button asChild variant="outline" className="flex-1">
-          <Link href="/me">내 정보 수정</Link>
+          <Link href="/me" prefetch>내 정보 수정</Link>
         </Button>
       </div>
 
